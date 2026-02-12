@@ -2,11 +2,11 @@ package entity
 
 // CardTemplates defines the base stats for each card type.
 var CardTemplates = map[CardType]CardData{
-	CardSoldier:  {Name: "Soldier", Type: CardSoldier, Race: RaceHuman, Cost: 2, HP: 50, Atk: 8, AtkSpeed: 60, Range: 1},
-	CardArcher:   {Name: "Archer", Type: CardArcher, Race: RaceHuman, Cost: 3, HP: 25, Atk: 10, AtkSpeed: 60, Range: 3},
-	CardSpearman: {Name: "Spearman", Type: CardSpearman, Race: RaceElf, Cost: 3, HP: 40, Atk: 10, AtkSpeed: 45, Range: 2},
-	CardMage:     {Name: "Mage", Type: CardMage, Race: RaceElf, Cost: 4, HP: 20, Atk: 15, AtkSpeed: 90, Range: 3},
-	CardFireball: {Name: "Fireball", Type: CardFireball, Race: RaceNone, Cost: 3, HP: 0, Atk: 20, AtkSpeed: 0, Range: 0},
+	CardSoldier:  {Name: "전사", Type: CardSoldier, Race: RaceHuman, Cost: 2, HP: 50, Atk: 8, AtkSpeed: 60, Range: 1},
+	CardArcher:   {Name: "궁수", Type: CardArcher, Race: RaceHuman, Cost: 3, HP: 25, Atk: 10, AtkSpeed: 60, Range: 3},
+	CardSpearman: {Name: "창병", Type: CardSpearman, Race: RaceElf, Cost: 3, HP: 40, Atk: 10, AtkSpeed: 45, Range: 2},
+	CardMage:     {Name: "마법사", Type: CardMage, Race: RaceElf, Cost: 4, HP: 20, Atk: 15, AtkSpeed: 90, Range: 3},
+	CardFireball: {Name: "화염구", Type: CardFireball, Race: RaceNone, Cost: 3, HP: 0, Atk: 20, AtkSpeed: 0, Range: 0},
 }
 
 // Waves defines the enemy composition for each of the 10 waves.

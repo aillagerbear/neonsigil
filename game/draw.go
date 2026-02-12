@@ -1,55 +1,86 @@
 package game
 
 import (
-	"fmt"
 	"image/color"
+	"math"
 
 	"ebitengine-testing/config"
 	"ebitengine-testing/entity"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-func (g *Game) drawTitle(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{0x0a, 0x0a, 0x1e, 0xff})
+// ---- Korean text drawing ----
 
-	ebitenutil.DebugPrintAt(screen, "========================================", 312, 200)
-	ebitenutil.DebugPrintAt(screen, "    SUMMONER'S DEFENSE", 370, 230)
-	ebitenutil.DebugPrintAt(screen, "========================================", 312, 260)
-	ebitenutil.DebugPrintAt(screen, "    Auto-Battle Deck Building Defense", 330, 310)
-	ebitenutil.DebugPrintAt(screen, "    Click anywhere to start!", 370, 400)
-
-	ebitenutil.DebugPrintAt(screen, "Controls:", 400, 480)
-	ebitenutil.DebugPrintAt(screen, "- Click card in hand to select", 370, 510)
-	ebitenutil.DebugPrintAt(screen, "- Click grid tile to place unit", 370, 530)
-	ebitenutil.DebugPrintAt(screen, "- Units auto-attack nearby enemies", 370, 550)
-	ebitenutil.DebugPrintAt(screen, "- Survive 10 waves to win!", 370, 570)
+func drawKoreanText(screen *ebiten.Image, s string, face text.Face, x, y float64, clr color.Color) {
+	op := &text.DrawOptions{}
+	op.GeoM.Translate(x, y)
+	op.ColorScale.ScaleWithColor(clr)
+	text.Draw(screen, s, face, op)
 }
 
+func drawKoreanTextWithShadow(screen *ebiten.Image, s string, face text.Face, x, y float64, clr color.Color) {
+	// Shadow
+	shadowOp := &text.DrawOptions{}
+	shadowOp.GeoM.Translate(x+1, y+1)
+	shadowOp.ColorScale.ScaleWithColor(color.RGBA{0x00, 0x00, 0x00, 0xAA})
+	text.Draw(screen, s, face, shadowOp)
+	// Main text
+	drawKoreanText(screen, s, face, x, y, clr)
+}
+
+// ---- Battle Screen ----
+
 func (g *Game) drawBattle(screen *ebiten.Image) {
+	drawStars(screen, g.bgStars, g.animTick)
 	g.drawPath(screen)
 	g.drawGrid(screen)
+	g.drawSummonerBase(screen)
 	g.drawSummoners(screen)
 	g.drawEnemies(screen)
 	g.drawProjectiles(screen)
-	g.drawSummonerBase(screen)
-	g.drawHUD(screen)
-	g.drawHand(screen)
-	g.drawSynergies(screen)
+	g.drawParticles(screen)
+
+	// Draw HP/Mana bars (pixel art style, over the ebitenui panels)
+	g.drawHPManaBar(screen)
 }
 
+// ---- Path ----
+
 func (g *Game) drawPath(screen *ebiten.Image) {
-	pathColor := color.RGBA{0x3a, 0x3a, 0x50, 0xff}
-	pathWidth := float32(30)
+	pathColor := color.RGBA{0x25, 0x25, 0x35, 0xFF}
+	pathBorder := color.RGBA{0x30, 0x30, 0x45, 0x88}
+	pathWidth := float32(32)
+	halfW := pathWidth / 2
 
 	for i := 0; i < len(entity.EnemyPath)-1; i++ {
 		x1, y1 := float32(entity.EnemyPath[i].X), float32(entity.EnemyPath[i].Y)
 		x2, y2 := float32(entity.EnemyPath[i+1].X), float32(entity.EnemyPath[i+1].Y)
-		vector.StrokeLine(screen, x1, y1, x2, y2, pathWidth, pathColor, true)
+
+		var rx, ry, rw, rh float32
+		if x1 == x2 { // vertical
+			rx = x1 - halfW
+			ry = float32(math.Min(float64(y1), float64(y2)))
+			rw = pathWidth
+			rh = float32(math.Abs(float64(y2-y1))) + pathWidth
+		} else { // horizontal
+			rx = float32(math.Min(float64(x1), float64(x2))) - halfW
+			ry = y1 - halfW
+			rw = float32(math.Abs(float64(x2-x1))) + pathWidth
+			rh = pathWidth
+		}
+
+		vector.FillRect(screen, rx, ry, rw, rh, pathColor, false)
+		vector.StrokeRect(screen, rx, ry, rw, rh, 1, pathBorder, false)
 	}
+
+	// Animated energy dots along path
+	drawPathEnergyDots(screen, g.animTick)
 }
+
+// ---- Grid ----
 
 func (g *Game) drawGrid(screen *ebiten.Image) {
 	mx, my := ebiten.CursorPosition()
@@ -59,67 +90,93 @@ func (g *Game) drawGrid(screen *ebiten.Image) {
 			x := float32(config.GridStartX + col*config.TileSize)
 			y := float32(config.GridStartY + row*config.TileSize)
 
-			tileColor := color.RGBA{0x2a, 0x4a, 0x2a, 0xaa}
+			var tile *ebiten.Image
 			if g.grid[row][col] != nil {
-				tileColor = color.RGBA{0x4a, 0x4a, 0x2a, 0xaa}
+				tile = g.sprites.OccupiedTile
+			} else {
+				tile = g.sprites.GrassTile
 			}
 
-			// 호버 강조
+			// Hover effect
 			if g.selectedCard >= 0 && mx >= int(x) && mx < int(x)+config.TileSize && my >= int(y) && my < int(y)+config.TileSize {
 				if g.grid[row][col] == nil {
-					tileColor = color.RGBA{0x3a, 0x7a, 0x3a, 0xcc}
+					tile = g.sprites.HoverTile
 				} else {
-					tileColor = color.RGBA{0x7a, 0x3a, 0x3a, 0xcc}
+					tile = g.sprites.BlockedTile
 				}
 			}
 
-			vector.FillRect(screen, x+1, y+1, float32(config.TileSize-2), float32(config.TileSize-2), tileColor, true)
-			vector.StrokeRect(screen, x, y, float32(config.TileSize), float32(config.TileSize), 1, color.RGBA{0x55, 0x88, 0x55, 0xff}, true)
+			// Draw tile texture
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM.Translate(float64(x), float64(y))
+			screen.DrawImage(tile, op)
 		}
 	}
 }
+
+// ---- Summoners (placed units) ----
 
 func (g *Game) drawSummoners(screen *ebiten.Image) {
 	for _, s := range g.summoners {
-		sx := float32(s.ScreenX)
-		sy := float32(s.ScreenY)
+		sx := s.ScreenX
+		sy := s.ScreenY
 
-		var unitColor color.RGBA
+		// Get sprite for unit type
+		var sprite *ebiten.Image
 		switch s.Card.Type {
 		case entity.CardSoldier:
-			unitColor = color.RGBA{0x40, 0x80, 0xff, 0xff} // 파랑 - 보병
+			sprite = g.sprites.Soldier
 		case entity.CardArcher:
-			unitColor = color.RGBA{0x80, 0xff, 0x40, 0xff} // 녹색 - 궁수
+			sprite = g.sprites.Archer
 		case entity.CardSpearman:
-			unitColor = color.RGBA{0xff, 0xc0, 0x40, 0xff} // 주황 - 창병
+			sprite = g.sprites.Spearman
 		case entity.CardMage:
-			unitColor = color.RGBA{0xc0, 0x40, 0xff, 0xff} // 보라 - 마법사
+			sprite = g.sprites.Mage
 		}
 
-		size := float32(30)
-		vector.FillRect(screen, sx-size/2, sy-size/2, size, size, unitColor, true)
-
-		label := ""
-		switch s.Card.Type {
-		case entity.CardSoldier:
-			label = "S"
-		case entity.CardArcher:
-			label = "A"
-		case entity.CardSpearman:
-			label = "P"
-		case entity.CardMage:
-			label = "M"
+		// Attack flash effect
+		scale := 4.0
+		if s.AtkTimer == 0 {
+			scale = 4.5
 		}
-		ebitenutil.DebugPrintAt(screen, label, int(sx)-3, int(sy)-6)
 
-		// 체력바
-		hpRatio := float32(s.CurrentHP) / float32(s.MaxHP)
-		barW := float32(30)
+		drawSpriteAt(screen, sprite, sx, sy, scale)
+
+		// Health bar (pixel style)
+		hpRatio := float64(s.CurrentHP) / float64(s.MaxHP)
+		barW := float32(32)
 		barH := float32(4)
-		vector.FillRect(screen, sx-barW/2, sy-size/2-6, barW, barH, color.RGBA{0x40, 0x40, 0x40, 0xff}, true)
-		vector.FillRect(screen, sx-barW/2, sy-size/2-6, barW*hpRatio, barH, color.RGBA{0x40, 0xff, 0x40, 0xff}, true)
+		barX := float32(sx) - barW/2
+		barY := float32(sy) - 24
+
+		hpColor := pixelPalette['b'] // green
+		if hpRatio < 0.3 {
+			hpColor = pixelPalette['8'] // red
+		} else if hpRatio < 0.6 {
+			hpColor = pixelPalette['a'] // yellow
+		}
+		drawPixelBar(screen, barX, barY, barW, barH, hpRatio, hpColor, color.RGBA{0x20, 0x20, 0x20, 0xFF})
+
+		// Range indicator (subtle dashed circle)
+		if g.selectedCard < 0 {
+			rangePixels := float64(s.Range) * float64(config.TileSize)
+			if rangePixels > float64(config.TileSize) {
+				numDots := 24
+				for i := 0; i < numDots; i++ {
+					if i%3 != 0 {
+						continue
+					}
+					angle := float64(i) / float64(numDots) * math.Pi * 2
+					dotX := sx + math.Cos(angle)*rangePixels
+					dotY := sy + math.Sin(angle)*rangePixels
+					vector.FillRect(screen, float32(dotX), float32(dotY), 1, 1, color.RGBA{0x50, 0x50, 0x70, 0x60}, false)
+				}
+			}
+		}
 	}
 }
+
+// ---- Enemies ----
 
 func (g *Game) drawEnemies(screen *ebiten.Image) {
 	for _, e := range g.enemies {
@@ -127,358 +184,127 @@ func (g *Game) drawEnemies(screen *ebiten.Image) {
 			continue
 		}
 
-		var enemyColor color.RGBA
-		var size float32
+		var sprite *ebiten.Image
+		var scale float64
 		switch e.Type {
 		case entity.EnemyGoblin:
-			enemyColor = color.RGBA{0xff, 0x60, 0x60, 0xff}
-			size = 12
+			sprite = g.sprites.Goblin
+			scale = 3.0
 		case entity.EnemyOrc:
-			enemyColor = color.RGBA{0xff, 0x30, 0x30, 0xff}
-			size = 16
+			sprite = g.sprites.Orc
+			scale = 3.0
 		case entity.EnemyBossOrc:
-			enemyColor = color.RGBA{0xff, 0x00, 0x00, 0xff}
-			size = 22
+			sprite = g.sprites.BossOrc
+			scale = 3.0
 		case entity.EnemyFinalBoss:
-			enemyColor = color.RGBA{0xff, 0x00, 0x80, 0xff}
-			size = 28
+			sprite = g.sprites.FinalBoss
+			scale = 3.0
 		}
 
-		vector.FillCircle(screen, float32(e.X), float32(e.Y), size, enemyColor, true)
-
-		// 보스 표시
+		// Boss glow effect (animated)
 		if e.Type == entity.EnemyBossOrc || e.Type == entity.EnemyFinalBoss {
-			vector.StrokeCircle(screen, float32(e.X), float32(e.Y), size+3, 2, color.RGBA{0xff, 0xff, 0x00, 0xff}, true)
+			glowAlpha := byte(60 + int(40*math.Sin(float64(g.animTick)*0.08)))
+			glowSize := float32(scale*6) + float32(4*math.Sin(float64(g.animTick)*0.05))
+			vector.FillCircle(screen, float32(e.X), float32(e.Y), glowSize, color.RGBA{0xFF, 0xA0, 0x00, glowAlpha}, false)
 		}
 
-		// 오라 표시
+		// Final boss aura ring
 		if e.HasAura {
-			vector.StrokeCircle(screen, float32(e.X), float32(e.Y), size+8, 1, color.RGBA{0xff, 0x80, 0x00, 0x80}, true)
+			auraSize := float32(50 + 5*math.Sin(float64(g.animTick)*0.06))
+			numDots := 16
+			for i := 0; i < numDots; i++ {
+				angle := float64(i)/float64(numDots)*math.Pi*2 + float64(g.animTick)*0.03
+				dotX := float32(e.X) + float32(math.Cos(angle))*auraSize
+				dotY := float32(e.Y) + float32(math.Sin(angle))*auraSize
+				vector.FillRect(screen, dotX-1, dotY-1, 3, 3, color.RGBA{0xFF, 0x80, 0x00, 0x99}, false)
+			}
 		}
 
-		// 체력바
-		hpRatio := float32(e.HP) / float32(e.MaxHP)
-		barW := size * 2
+		drawSpriteAt(screen, sprite, e.X, e.Y, scale)
+
+		// Health bar
+		hpRatio := float64(e.HP) / float64(e.MaxHP)
+		spriteH := float64(sprite.Bounds().Dy()) * scale
+		barW := float32(scale * float64(sprite.Bounds().Dx()))
 		barH := float32(3)
-		vector.FillRect(screen, float32(e.X)-barW/2, float32(e.Y)-size-6, barW, barH, color.RGBA{0x40, 0x40, 0x40, 0xff}, true)
-		vector.FillRect(screen, float32(e.X)-barW/2, float32(e.Y)-size-6, barW*hpRatio, barH, color.RGBA{0xff, 0x40, 0x40, 0xff}, true)
+		barX := float32(e.X) - barW/2
+		barY := float32(e.Y) - float32(spriteH)/2 - 6
+
+		drawPixelBar(screen, barX, barY, barW, barH, hpRatio, pixelPalette['8'], color.RGBA{0x20, 0x20, 0x20, 0xFF})
 	}
 }
+
+// ---- Projectiles ----
 
 func (g *Game) drawProjectiles(screen *ebiten.Image) {
 	for _, p := range g.projectiles {
 		if p.IsFireball {
-			vector.FillCircle(screen, float32(p.X), float32(p.Y), 8, color.RGBA{0xff, 0x80, 0x00, 0xff}, true)
+			scale := 3.0 + 0.5*math.Sin(float64(g.animTick)*0.3)
+			drawSpriteAt(screen, g.sprites.Fireball, p.X, p.Y, scale)
 		} else {
-			vector.FillCircle(screen, float32(p.X), float32(p.Y), 4, color.RGBA{0xff, 0xff, 0x80, 0xff}, true)
+			drawSpriteAt(screen, g.sprites.Arrow, p.X, p.Y, 2.0)
 		}
 	}
 }
+
+// ---- Summoner Base ----
 
 func (g *Game) drawSummonerBase(screen *ebiten.Image) {
 	lastP := entity.EnemyPath[len(entity.EnemyPath)-1]
-	baseColor := color.RGBA{0x00, 0xaa, 0xff, 0xff}
-	vector.FillCircle(screen, float32(lastP.X), float32(lastP.Y), 20, baseColor, true)
-	vector.StrokeCircle(screen, float32(lastP.X), float32(lastP.Y), 22, 2, color.RGBA{0x00, 0xff, 0xff, 0xff}, true)
-	ebitenutil.DebugPrintAt(screen, "BASE", int(lastP.X)-14, int(lastP.Y)-6)
+	bx, by := lastP.X, lastP.Y
+
+	// Animated glow
+	glowAlpha := byte(40 + int(30*math.Sin(float64(g.animTick)*0.04)))
+	glowSize := float32(28 + 4*math.Sin(float64(g.animTick)*0.03))
+	vector.FillCircle(screen, float32(bx), float32(by), glowSize, color.RGBA{0x29, 0xAD, 0xFF, glowAlpha}, false)
+
+	// Crystal sprite
+	pulse := 3.0 + 0.2*math.Sin(float64(g.animTick)*0.05)
+	drawSpriteAt(screen, g.sprites.Base, bx, by, pulse)
+
+	// Label
+	drawKoreanTextWithShadow(screen, "기지", fontSmall, bx-10, by+18, color.RGBA{0xFF, 0xF1, 0xE8, 0xFF})
 }
 
-func (g *Game) drawHUD(screen *ebiten.Image) {
-	// 상단 바 배경
-	vector.FillRect(screen, 0, 0, config.ScreenWidth, float32(config.HUDHeight), color.RGBA{0x10, 0x10, 0x20, 0xee}, true)
+// ---- HP/Mana bars (pixel art style) ----
 
-	// 웨이브 정보
-	waveText := fmt.Sprintf("Wave %d/%d", g.wave+1, g.maxWave)
-	ebitenutil.DebugPrintAt(screen, waveText, 20, 12)
-
-	// 남은 적
-	aliveCount := 0
-	for _, e := range g.enemies {
-		if !e.Dead && !e.Reached {
-			aliveCount++
-		}
-	}
-	aliveCount += len(g.spawnQueue)
-	enemyText := fmt.Sprintf("Enemies: %d", aliveCount)
-	ebitenutil.DebugPrintAt(screen, enemyText, 180, 12)
-
-	// FPS
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("FPS: %.0f", ebiten.ActualFPS()), 400, 12)
-
-	// 속도 버튼
-	btn1Color := color.RGBA{0x40, 0x40, 0x60, 0xff}
-	btn2Color := color.RGBA{0x40, 0x40, 0x60, 0xff}
-	if g.gameSpeed == 1 {
-		btn1Color = color.RGBA{0x40, 0x80, 0x40, 0xff}
-	} else {
-		btn2Color = color.RGBA{0x40, 0x80, 0x40, 0xff}
-	}
-	vector.FillRect(screen, 880, 5, 40, 30, btn1Color, true)
-	vector.FillRect(screen, 930, 5, 40, 30, btn2Color, true)
-	ebitenutil.DebugPrintAt(screen, "1x", 892, 12)
-	ebitenutil.DebugPrintAt(screen, "2x", 942, 12)
-
-	// 좌측 사이드바
-	vector.FillRect(screen, 0, float32(config.HUDHeight), float32(config.SidebarWidth), float32(config.ScreenHeight-config.HUDHeight-config.HandHeight), color.RGBA{0x15, 0x15, 0x25, 0xdd}, true)
-
-	// HP 바
-	ebitenutil.DebugPrintAt(screen, "HP", 10, 60)
-	hpRatio := float32(g.summonerHP) / float32(config.SummonerMaxHP)
-	vector.FillRect(screen, 10, 80, 100, 20, color.RGBA{0x40, 0x40, 0x40, 0xff}, true)
-	hpBarColor := color.RGBA{0x40, 0xff, 0x40, 0xff}
+func (g *Game) drawHPManaBar(screen *ebiten.Image) {
+	// HP bar below left sidebar label area
+	hpRatio := float64(g.summonerHP) / float64(config.SummonerMaxHP)
+	hpColor := pixelPalette['b'] // green
 	if hpRatio < 0.3 {
-		hpBarColor = color.RGBA{0xff, 0x40, 0x40, 0xff}
+		hpColor = pixelPalette['8'] // red
 	} else if hpRatio < 0.6 {
-		hpBarColor = color.RGBA{0xff, 0xff, 0x40, 0xff}
+		hpColor = pixelPalette['a'] // yellow
 	}
-	vector.FillRect(screen, 10, 80, 100*hpRatio, 20, hpBarColor, true)
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d/%d", g.summonerHP, config.SummonerMaxHP), 25, 83)
+	drawPixelBar(screen, 10, 70, 96, 10, hpRatio, hpColor, color.RGBA{0x20, 0x20, 0x20, 0xFF})
 
-	// 마나 바
-	ebitenutil.DebugPrintAt(screen, "MANA", 10, 120)
-	manaRatio := float32(g.mana) / float32(g.maxMana)
-	vector.FillRect(screen, 10, 140, 100, 20, color.RGBA{0x40, 0x40, 0x40, 0xff}, true)
-	vector.FillRect(screen, 10, 140, 100*manaRatio, 20, color.RGBA{0x40, 0x80, 0xff, 0xff}, true)
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%.0f/%d", g.mana, g.maxMana), 30, 143)
-}
+	// Mana bar
+	manaRatio := g.mana / float64(g.maxMana)
+	manaColor := pixelPalette['c'] // blue
+	drawPixelBar(screen, 10, 115, 96, 10, manaRatio, manaColor, color.RGBA{0x20, 0x20, 0x20, 0xFF})
 
-func (g *Game) drawHand(screen *ebiten.Image) {
-	handY := config.ScreenHeight - config.HandHeight
-
-	// 핸드 배경
-	vector.FillRect(screen, 0, float32(handY), config.ScreenWidth, float32(config.HandHeight), color.RGBA{0x15, 0x15, 0x25, 0xee}, true)
-
-	// 덱/묘지 카운트
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Deck:%d", len(g.deck)), 15, handY+50)
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Grav:%d", len(g.graveyard)), config.ScreenWidth-80, handY+50)
-
-	// 카드 렌더링
-	cardWidth := 130
-	cardHeight := 90
-	cardSpacing := 10
-	totalWidth := len(g.hand)*(cardWidth+cardSpacing) - cardSpacing
-	startX := (config.ScreenWidth - totalWidth) / 2
-
-	mx, my := ebiten.CursorPosition()
-
-	for i, card := range g.hand {
-		cx := startX + i*(cardWidth+cardSpacing)
-		cy := handY + 10
-
-		bgColor := color.RGBA{0x30, 0x30, 0x50, 0xff}
-		canAfford := g.mana >= float64(card.Data.Cost)
-
-		if !canAfford {
-			bgColor = color.RGBA{0x30, 0x20, 0x20, 0xff}
-		}
-
-		// 호버 효과
-		isHover := mx >= cx && mx <= cx+cardWidth && my >= cy && my <= cy+cardHeight
-		if isHover && canAfford {
-			bgColor = color.RGBA{0x40, 0x50, 0x70, 0xff}
-		}
-
-		// 선택 효과
-		if g.selectedCard == i {
-			bgColor = color.RGBA{0x50, 0x70, 0x50, 0xff}
-		}
-
-		vector.FillRect(screen, float32(cx), float32(cy), float32(cardWidth), float32(cardHeight), bgColor, true)
-
-		// 카드 테두리
-		borderColor := color.RGBA{0x80, 0x80, 0xa0, 0xff}
-		if g.selectedCard == i {
-			borderColor = color.RGBA{0x80, 0xff, 0x80, 0xff}
-		}
-		vector.StrokeRect(screen, float32(cx), float32(cy), float32(cardWidth), float32(cardHeight), 2, borderColor, true)
-
-		// 종족 색상 표시
-		var raceColor color.RGBA
-		switch card.Data.Race {
-		case entity.RaceHuman:
-			raceColor = color.RGBA{0x40, 0x80, 0xff, 0xff}
-		case entity.RaceElf:
-			raceColor = color.RGBA{0x40, 0xff, 0x80, 0xff}
-		default:
-			raceColor = color.RGBA{0xff, 0x80, 0x40, 0xff}
-		}
-		vector.FillRect(screen, float32(cx), float32(cy), 5, float32(cardHeight), raceColor, true)
-
-		// 카드 정보
-		ebitenutil.DebugPrintAt(screen, card.Data.Name, cx+10, cy+5)
-
-		costColor := ""
-		if !canAfford {
-			costColor = "(X)"
-		}
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Cost:%d%s", card.Data.Cost, costColor), cx+10, cy+22)
-
-		if card.Data.Type != entity.CardFireball {
-			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("HP:%d ATK:%d", card.Data.HP, card.Data.Atk), cx+10, cy+39)
-			rangeText := "Melee"
-			if card.Data.Range > 1 {
-				rangeText = fmt.Sprintf("Range:%d", card.Data.Range)
-			}
-			ebitenutil.DebugPrintAt(screen, rangeText, cx+10, cy+56)
-		} else {
-			ebitenutil.DebugPrintAt(screen, "DMG:20 AOE", cx+10, cy+39)
-			ebitenutil.DebugPrintAt(screen, "Click target", cx+10, cy+56)
-		}
-
-		// 종족 표시
-		raceName := ""
-		switch card.Data.Race {
-		case entity.RaceHuman:
-			raceName = "[Human]"
-		case entity.RaceElf:
-			raceName = "[Elf]"
-		}
-		if raceName != "" {
-			ebitenutil.DebugPrintAt(screen, raceName, cx+10, cy+73)
-		}
-	}
-
-	// 파이어볼 모드 안내
-	if g.fireballMode {
-		ebitenutil.DebugPrintAt(screen, ">> FIREBALL: Click target area! <<", 380, handY-20)
+	// Mana regen indicator
+	regenProgress := float64(g.manaTimer) / float64(config.ManaRegenTicks)
+	if g.mana < float64(g.maxMana) {
+		regenBarW := float32(96 * regenProgress)
+		vector.FillRect(screen, 10, 126, regenBarW, 2, color.RGBA{0x29, 0xAD, 0xFF, 0x60}, false)
 	}
 }
 
-func (g *Game) drawSynergies(screen *ebiten.Image) {
-	// 우측 사이드바
-	sx := float32(config.ScreenWidth - config.SidebarWidth)
-	vector.FillRect(screen, sx, float32(config.HUDHeight), float32(config.SidebarWidth), float32(config.ScreenHeight-config.HUDHeight-config.HandHeight), color.RGBA{0x15, 0x15, 0x25, 0xdd}, true)
+// ---- Fireball mode indicator ----
 
-	ebitenutil.DebugPrintAt(screen, "Synergies", config.ScreenWidth-config.SidebarWidth+10, 55)
-
-	// 인간 시너지
-	humanText := fmt.Sprintf("Human %d/2", g.humanCount)
-	humanColor := color.RGBA{0x60, 0x60, 0x60, 0xff}
-	if g.humanSynergy {
-		humanColor = color.RGBA{0x40, 0x80, 0xff, 0xff}
-		humanText += " ON"
-	}
-	vector.FillRect(screen, sx+5, 80, 110, 40, humanColor, true)
-	ebitenutil.DebugPrintAt(screen, humanText, config.ScreenWidth-config.SidebarWidth+10, 85)
-	if g.humanSynergy {
-		ebitenutil.DebugPrintAt(screen, "HP +20%", config.ScreenWidth-config.SidebarWidth+10, 102)
-	}
-
-	// 엘프 시너지
-	elfText := fmt.Sprintf("Elf %d/2", g.elfCount)
-	elfColor := color.RGBA{0x60, 0x60, 0x60, 0xff}
-	if g.elfSynergy {
-		elfColor = color.RGBA{0x40, 0xff, 0x80, 0xff}
-		elfText += " ON"
-	}
-	vector.FillRect(screen, sx+5, 130, 110, 40, elfColor, true)
-	ebitenutil.DebugPrintAt(screen, elfText, config.ScreenWidth-config.SidebarWidth+10, 135)
-	if g.elfSynergy {
-		ebitenutil.DebugPrintAt(screen, "SPD +20%", config.ScreenWidth-config.SidebarWidth+10, 152)
-	}
+func (g *Game) drawFireballIndicator(screen *ebiten.Image) {
+	flash := byte(150 + int(105*math.Sin(float64(g.animTick)*0.15)))
+	drawKoreanTextWithShadow(screen, ">> 화염구: 타겟 지역을 클릭하세요! <<", fontMedium,
+		float64(config.ScreenWidth)/2-140, float64(config.ScreenHeight-config.HandHeight-30),
+		color.RGBA{0xFF, flash, 0x00, 0xFF})
+	// Animated border flash
+	vector.StrokeRect(screen, 0, 0, config.ScreenWidth, config.ScreenHeight, 2, color.RGBA{0xFF, flash, 0x00, flash}, false)
 }
 
-func (g *Game) drawReward(screen *ebiten.Image) {
-	// 반투명 오버레이
-	vector.FillRect(screen, 0, 0, config.ScreenWidth, config.ScreenHeight, color.RGBA{0x00, 0x00, 0x00, 0xbb}, true)
+// ---- Unused drawTextWithShadow kept for compatibility ----
 
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Wave %d Clear! Choose a card:", g.wave+1), 380, 120)
-
-	cardWidth := 180
-	cardHeight := 250
-	spacing := 30
-	totalWidth := 3*(cardWidth+spacing) - spacing
-	startX := (config.ScreenWidth - totalWidth) / 2
-	startY := (config.ScreenHeight - cardHeight) / 2
-
-	for i, card := range g.rewardCards {
-		cx := startX + i*(cardWidth+spacing)
-		cy := startY
-
-		bgColor := color.RGBA{0x30, 0x30, 0x50, 0xff}
-		if g.rewardHover == i {
-			bgColor = color.RGBA{0x50, 0x60, 0x80, 0xff}
-		}
-
-		vector.FillRect(screen, float32(cx), float32(cy), float32(cardWidth), float32(cardHeight), bgColor, true)
-
-		borderColor := color.RGBA{0x80, 0x80, 0xa0, 0xff}
-		if g.rewardHover == i {
-			borderColor = color.RGBA{0xff, 0xff, 0x40, 0xff}
-		}
-		vector.StrokeRect(screen, float32(cx), float32(cy), float32(cardWidth), float32(cardHeight), 2, borderColor, true)
-
-		// 종족 색상 바
-		var raceColor color.RGBA
-		switch card.Data.Race {
-		case entity.RaceHuman:
-			raceColor = color.RGBA{0x40, 0x80, 0xff, 0xff}
-		case entity.RaceElf:
-			raceColor = color.RGBA{0x40, 0xff, 0x80, 0xff}
-		default:
-			raceColor = color.RGBA{0xff, 0x80, 0x40, 0xff}
-		}
-		vector.FillRect(screen, float32(cx), float32(cy), 8, float32(cardHeight), raceColor, true)
-
-		// 카드 정보
-		ebitenutil.DebugPrintAt(screen, card.Data.Name, cx+20, cy+20)
-
-		raceName := ""
-		switch card.Data.Race {
-		case entity.RaceHuman:
-			raceName = "Human"
-		case entity.RaceElf:
-			raceName = "Elf"
-		}
-		if raceName != "" {
-			ebitenutil.DebugPrintAt(screen, raceName, cx+20, cy+45)
-		}
-
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Cost: %d", card.Data.Cost), cx+20, cy+70)
-
-		if card.Data.Type != entity.CardFireball {
-			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("HP: %d", card.Data.HP), cx+20, cy+95)
-			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("ATK: %d", card.Data.Atk), cx+20, cy+120)
-
-			speedText := "Normal"
-			if card.Data.AtkSpeed < 50 {
-				speedText = "Fast"
-			} else if card.Data.AtkSpeed > 70 {
-				speedText = "Slow"
-			}
-			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Speed: %s", speedText), cx+20, cy+145)
-
-			rangeText := "Melee"
-			if card.Data.Range > 1 {
-				rangeText = fmt.Sprintf("%d tiles", card.Data.Range)
-			}
-			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Range: %s", rangeText), cx+20, cy+170)
-		} else {
-			ebitenutil.DebugPrintAt(screen, "Spell Card", cx+20, cy+95)
-			ebitenutil.DebugPrintAt(screen, "DMG: 20 (AOE)", cx+20, cy+120)
-			ebitenutil.DebugPrintAt(screen, "Damages all", cx+20, cy+145)
-			ebitenutil.DebugPrintAt(screen, "enemies nearby", cx+20, cy+170)
-		}
-
-		ebitenutil.DebugPrintAt(screen, "Click to add", cx+45, cy+220)
-	}
-}
-
-func (g *Game) drawGameOver(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{0x20, 0x00, 0x00, 0xff})
-	ebitenutil.DebugPrintAt(screen, "========================================", 312, 280)
-	ebitenutil.DebugPrintAt(screen, "          GAME OVER", 390, 310)
-	ebitenutil.DebugPrintAt(screen, "========================================", 312, 340)
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("   You reached Wave %d/%d", g.wave+1, g.maxWave), 370, 400)
-	ebitenutil.DebugPrintAt(screen, "   Click to return to title", 370, 460)
-}
-
-func (g *Game) drawVictory(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{0x00, 0x10, 0x20, 0xff})
-	ebitenutil.DebugPrintAt(screen, "========================================", 312, 250)
-	ebitenutil.DebugPrintAt(screen, "        VICTORY!", 400, 280)
-	ebitenutil.DebugPrintAt(screen, "========================================", 312, 310)
-	ebitenutil.DebugPrintAt(screen, "   You defended against all 10 waves!", 340, 370)
-	ebitenutil.DebugPrintAt(screen, "   The summoner is safe!", 370, 400)
-	ebitenutil.DebugPrintAt(screen, "   Click to return to title", 370, 460)
+func drawTextWithShadow(screen *ebiten.Image, s string, x, y int) {
+	drawKoreanTextWithShadow(screen, s, fontSmall, float64(x), float64(y), color.RGBA{0xFF, 0xF1, 0xE8, 0xFF})
 }

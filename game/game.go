@@ -1,13 +1,10 @@
 package game
 
 import (
-	"image/color"
-
 	"ebitengine-testing/config"
 	"ebitengine-testing/entity"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 // Game implements the ebiten.Game interface and holds all game state.
@@ -54,11 +51,24 @@ type Game struct {
 
 	// 틱 카운터
 	ticks int
+
+	// Visual effects
+	particles []Particle
+	sprites   *SpriteCache
+	bgStars   []Star
+	animTick  int
+
+	// ebitenui
+	ui            *UIManager
+	rewardReady   bool
+	endScreenReady bool
 }
 
 // New creates a new Game in the title state.
 func New() *Game {
-	return &Game{
+	initFonts()
+
+	g := &Game{
 		state:        entity.StateTitle,
 		maxWave:      10,
 		maxMana:      config.MaxMana,
@@ -66,47 +76,114 @@ func New() *Game {
 		selectedCard: -1,
 		rewardHover:  -1,
 	}
+	g.sprites = initSprites()
+	g.bgStars = initStars(80)
+	g.ui = newUIManager(g)
+	return g
 }
 
 // Update implements ebiten.Game.
 func (g *Game) Update() error {
+	g.animTick++
+	g.updateParticles()
+
 	switch g.state {
 	case entity.StateTitle:
-		g.updateTitle()
+		g.ui.titleUI.Update()
 	case entity.StateBattle:
+		g.ui.updateBattleHUD(g)
+		g.ui.battleUI.Update()
 		for i := 0; i < g.gameSpeed; i++ {
 			g.updateBattle()
 		}
 	case entity.StateReward:
-		g.updateReward()
-	case entity.StateGameOver, entity.StateVictory:
-		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-			g.state = entity.StateTitle
+		if !g.rewardReady {
+			g.ui.updateReward(g)
+			g.rewardReady = true
 		}
+		g.ui.rewardUI.Update()
+	case entity.StateGameOver, entity.StateVictory:
+		if !g.endScreenReady {
+			g.ui.updateEndScreen(g)
+			g.endScreenReady = true
+		}
+		g.ui.endUI.Update()
 	}
 	return nil
 }
 
 // Draw implements ebiten.Game.
 func (g *Game) Draw(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{0x1a, 0x1a, 0x2e, 0xff})
+	screen.Fill(colorBG)
 
 	switch g.state {
 	case entity.StateTitle:
-		g.drawTitle(screen)
+		drawStars(screen, g.bgStars, g.animTick)
+		g.ui.titleUI.Draw(screen)
 	case entity.StateBattle:
 		g.drawBattle(screen)
+		g.ui.battleUI.Draw(screen)
+		if g.fireballMode {
+			g.drawFireballIndicator(screen)
+		}
 	case entity.StateReward:
 		g.drawBattle(screen)
-		g.drawReward(screen)
-	case entity.StateGameOver:
-		g.drawGameOver(screen)
-	case entity.StateVictory:
-		g.drawVictory(screen)
+		g.ui.rewardUI.Draw(screen)
+	case entity.StateGameOver, entity.StateVictory:
+		drawStars(screen, g.bgStars, g.animTick)
+		g.ui.endUI.Draw(screen)
 	}
 }
 
 // Layout implements ebiten.Game.
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return config.ScreenWidth, config.ScreenHeight
+}
+
+// handleCardSelect is called by ebitenui when a card button is clicked
+func (g *Game) handleCardSelect(index int) {
+	if index < 0 || index >= len(g.hand) {
+		return
+	}
+
+	if g.selectedCard == index {
+		g.selectedCard = -1
+		return
+	}
+
+	g.selectedCard = index
+	if g.hand[index].Data.Type == entity.CardFireball {
+		if g.mana >= float64(g.hand[index].Data.Cost) {
+			g.mana -= float64(g.hand[index].Data.Cost)
+			g.graveyard = append(g.graveyard, g.hand[index])
+			g.hand = append(g.hand[:index], g.hand[index+1:]...)
+			g.drawCard()
+			g.fireballMode = true
+			g.selectedCard = -1
+		} else {
+			g.selectedCard = -1
+		}
+	}
+}
+
+// handleRewardSelect is called by ebitenui when a reward card is clicked
+func (g *Game) handleRewardSelect(index int) {
+	if index < 0 || index >= len(g.rewardCards) {
+		return
+	}
+
+	g.deck = append(g.deck, g.rewardCards[index])
+	g.shuffleDeck()
+
+	for len(g.hand) < config.MaxHandSize {
+		if len(g.deck) == 0 && len(g.graveyard) == 0 {
+			break
+		}
+		g.drawCard()
+	}
+
+	g.wave++
+	g.state = entity.StateBattle
+	g.rewardReady = false
+	g.startWave()
 }

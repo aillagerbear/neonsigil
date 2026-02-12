@@ -11,7 +11,7 @@ import (
 
 func main() {
 	ebiten.SetWindowSize(config.ScreenWidth, config.ScreenHeight)
-	ebiten.SetWindowTitle("Summoner's Defense - Auto Battle Deck Building Defense")
+	ebiten.SetWindowTitle("소환사의 수호 - 자동전투 덱빌딩 디펜스")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	if err := ebiten.RunGame(game.New()); err != nil {

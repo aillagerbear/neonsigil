@@ -25,8 +25,10 @@ func (g *Game) initBattle() {
 	g.grid = [config.GridRows][config.GridCols]*entity.Summoner{}
 	g.graveyard = nil
 	g.ticks = 0
+	g.rewardReady = false
+	g.endScreenReady = false
 
-	// 초기 덱 생성: 보병 4장 + 궁수 4장
+	// 초기 덱 생성: 전사 4장 + 궁수 4장
 	g.deck = nil
 	for i := 0; i < 4; i++ {
 		g.deck = append(g.deck, entity.Card{Data: entity.CardTemplates[entity.CardSoldier]})
@@ -171,12 +173,6 @@ func (g *Game) updateSynergies() {
 	}
 }
 
-func (g *Game) updateTitle() {
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		g.initBattle()
-	}
-}
-
 func (g *Game) updateBattle() {
 	g.ticks++
 
@@ -269,6 +265,7 @@ func (g *Game) updateBattle() {
 		if dist < p.Speed+5 {
 			// 명중
 			if p.IsFireball {
+				g.spawnFireballExplosion(p.TargetX, p.TargetY)
 				// AOE 피해
 				for _, e := range g.enemies {
 					if e.Dead || e.Reached {
@@ -282,11 +279,16 @@ func (g *Game) updateBattle() {
 				}
 			} else if p.Target != nil {
 				p.Target.HP -= p.Damage
+				g.spawnHitParticles(p.TargetX, p.TargetY)
 			}
 			continue
 		}
 		p.X += dx / dist * p.Speed
 		p.Y += dy / dist * p.Speed
+		// Spawn trail particle
+		if g.ticks%2 == 0 {
+			g.spawnTrailParticle(p.X, p.Y, p.IsFireball)
+		}
 		aliveProjectiles = append(aliveProjectiles, p)
 	}
 	g.projectiles = aliveProjectiles
@@ -298,12 +300,25 @@ func (g *Game) updateBattle() {
 		}
 		if e.HP <= 0 {
 			e.Dead = true
+			var deathColor = pixelPalette['8'] // red default
+			switch e.Type {
+			case entity.EnemyGoblin:
+				deathColor = pixelPalette['b'] // green
+			case entity.EnemyOrc:
+				deathColor = pixelPalette['4'] // brown
+			case entity.EnemyBossOrc:
+				deathColor = pixelPalette['9'] // orange
+			case entity.EnemyFinalBoss:
+				deathColor = pixelPalette['2'] // purple
+			}
+			g.spawnDeathParticles(e.X, e.Y, deathColor)
 		}
 	}
 
 	// 소환사 HP 체크
 	if g.summonerHP <= 0 {
 		g.state = entity.StateGameOver
+		g.endScreenReady = false
 		return
 	}
 
@@ -320,13 +335,14 @@ func (g *Game) updateBattle() {
 			g.waveComplete = true
 			if g.wave >= g.maxWave-1 {
 				g.state = entity.StateVictory
+				g.endScreenReady = false
 			} else {
 				g.prepareReward()
 			}
 		}
 	}
 
-	// 마우스 입력 처리 (카드 선택/배치)
+	// 마우스 입력 처리 (그리드 배치 + 파이어볼 타겟팅)
 	g.handleBattleInput()
 }
 
@@ -382,17 +398,7 @@ func (g *Game) handleBattleInput() {
 
 	mx, my := ebiten.CursorPosition()
 
-	// 속도 조절 버튼
-	if my < config.HUDHeight {
-		if mx >= 880 && mx <= 920 {
-			g.gameSpeed = 1
-		} else if mx >= 930 && mx <= 970 {
-			g.gameSpeed = 2
-		}
-		return
-	}
-
-	// 파이어볼 모드
+	// 파이어볼 모드: 클릭하면 화염구 발사
 	if g.fireballMode {
 		fx := float64(mx)
 		fy := float64(my)
@@ -412,40 +418,7 @@ func (g *Game) handleBattleInput() {
 		return
 	}
 
-	// 핸드 카드 클릭 (하단)
-	handY := config.ScreenHeight - config.HandHeight
-	if my >= handY {
-		cardWidth := 130
-		cardSpacing := 10
-		totalWidth := len(g.hand)*(cardWidth+cardSpacing) - cardSpacing
-		startX := (config.ScreenWidth - totalWidth) / 2
-
-		for i := range g.hand {
-			cx := startX + i*(cardWidth+cardSpacing)
-			if mx >= cx && mx <= cx+cardWidth && my >= handY+10 && my <= handY+config.HandHeight-10 {
-				if g.selectedCard == i {
-					g.selectedCard = -1
-				} else {
-					g.selectedCard = i
-					if g.hand[i].Data.Type == entity.CardFireball {
-						if g.mana >= float64(g.hand[i].Data.Cost) {
-							g.mana -= float64(g.hand[i].Data.Cost)
-							g.graveyard = append(g.graveyard, g.hand[i])
-							g.hand = append(g.hand[:i], g.hand[i+1:]...)
-							g.drawCard()
-							g.fireballMode = true
-						} else {
-							g.selectedCard = -1
-						}
-					}
-				}
-				return
-			}
-		}
-		return
-	}
-
-	// 그리드 타일 클릭 (배치)
+	// 그리드 타일 클릭 (배치) - 카드 선택/속도 조절은 ebitenui가 처리
 	if g.selectedCard >= 0 && g.selectedCard < len(g.hand) {
 		card := g.hand[g.selectedCard]
 		if card.Data.Type == entity.CardFireball {
@@ -475,6 +448,7 @@ func (g *Game) handleBattleInput() {
 				g.selectedCard = -1
 				g.drawCard()
 				g.updateSynergies()
+				g.spawnPlaceParticles(s.ScreenX, s.ScreenY)
 			}
 		}
 	}
@@ -484,6 +458,7 @@ func (g *Game) prepareReward() {
 	g.state = entity.StateReward
 	g.rewardCards = nil
 	g.rewardHover = -1
+	g.rewardReady = false
 
 	allTypes := []entity.CardType{entity.CardSoldier, entity.CardArcher, entity.CardSpearman, entity.CardMage, entity.CardFireball}
 	// 3장의 랜덤 카드 제시
@@ -493,40 +468,4 @@ func (g *Game) prepareReward() {
 	}
 }
 
-func (g *Game) updateReward() {
-	mx, my := ebiten.CursorPosition()
-
-	// 보상 카드 호버/클릭
-	cardWidth := 180
-	cardHeight := 250
-	spacing := 30
-	totalWidth := 3*(cardWidth+spacing) - spacing
-	startX := (config.ScreenWidth - totalWidth) / 2
-	startY := (config.ScreenHeight - cardHeight) / 2
-
-	g.rewardHover = -1
-	for i := 0; i < 3 && i < len(g.rewardCards); i++ {
-		cx := startX + i*(cardWidth+spacing)
-		if mx >= cx && mx <= cx+cardWidth && my >= startY && my <= startY+cardHeight {
-			g.rewardHover = i
-		}
-	}
-
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) && g.rewardHover >= 0 {
-		// 선택한 카드를 덱에 추가
-		g.deck = append(g.deck, g.rewardCards[g.rewardHover])
-		g.shuffleDeck()
-
-		// 핸드 보충
-		for len(g.hand) < config.MaxHandSize {
-			if len(g.deck) == 0 && len(g.graveyard) == 0 {
-				break
-			}
-			g.drawCard()
-		}
-
-		g.wave++
-		g.state = entity.StateBattle
-		g.startWave()
-	}
-}
+// updateReward is no longer needed - ebitenui handles reward selection via handleRewardSelect
