@@ -25,7 +25,7 @@ func drawKoreanTextWithShadow(screen *ebiten.Image, s string, face text.Face, x,
 	// Shadow
 	shadowOp := &text.DrawOptions{}
 	shadowOp.GeoM.Translate(x+1, y+1)
-	shadowOp.ColorScale.ScaleWithColor(color.RGBA{0x00, 0x00, 0x00, 0xAA})
+	shadowOp.ColorScale.ScaleWithColor(color.RGBA{0x73, 0x64, 0x93, 0x8A})
 	text.Draw(screen, s, face, shadowOp)
 	// Main text
 	drawKoreanText(screen, s, face, x, y, clr)
@@ -47,8 +47,8 @@ func (g *Game) drawBattle(screen *ebiten.Image) {
 // ---- Path ----
 
 func (g *Game) drawPath(screen *ebiten.Image) {
-	pathColor := color.RGBA{0x1b, 0x24, 0x34, 0xE8}
-	pathBorder := color.RGBA{0x3c, 0x59, 0x79, 0xAA}
+	pathColor := color.RGBA{0xF2, 0xE0, 0xF8, 0xE8}
+	pathBorder := color.RGBA{0xD2, 0xAE, 0xDE, 0xB8}
 	pathWidth := float32(32)
 	halfW := pathWidth / 2
 
@@ -70,7 +70,7 @@ func (g *Game) drawPath(screen *ebiten.Image) {
 		}
 
 		vector.FillRect(screen, rx, ry, rw, rh, pathColor, false)
-		vector.FillRect(screen, rx+1, ry+1, rw-2, rh*0.34, color.RGBA{0x6B, 0x91, 0xB8, 0x1D}, false)
+		vector.FillRect(screen, rx+1, ry+1, rw-2, rh*0.34, color.RGBA{0xFF, 0xFF, 0xFF, 0x66}, false)
 		vector.StrokeRect(screen, rx, ry, rw, rh, 1, pathBorder, false)
 	}
 
@@ -93,7 +93,7 @@ func (g *Game) drawGrid(screen *ebiten.Image) {
 
 			if !showPlacement {
 				// Keep only a tiny anchor point so the map is visible while no card is selected.
-				vector.FillCircle(screen, cx, cy, 1.6, color.RGBA{0x63, 0x86, 0xAA, 0x55}, false)
+				vector.FillCircle(screen, cx, cy, 1.6, color.RGBA{0xCC, 0xB5, 0xE8, 0x70}, false)
 				continue
 			}
 
@@ -125,12 +125,12 @@ func (g *Game) drawGrid(screen *ebiten.Image) {
 			}
 			op.ColorScale.ScaleAlpha(alpha)
 			screen.DrawImage(tile, op)
-			vector.StrokeRect(screen, x, y, config.TileSize, config.TileSize, 1, color.RGBA{0x3A, 0x5B, 0x7D, 0x5A}, false)
+			vector.StrokeRect(screen, x, y, config.TileSize, config.TileSize, 1, color.RGBA{0xD7, 0xB8, 0xE9, 0x82}, false)
 
 			if isHover {
-				hoverBorder := color.RGBA{0x4f, 0xd0, 0xdd, 0xC8}
+				hoverBorder := color.RGBA{0x86, 0xE0, 0xCC, 0xD8}
 				if occupied {
-					hoverBorder = color.RGBA{0xbd, 0x58, 0x6c, 0xD0}
+					hoverBorder = color.RGBA{0xF7, 0xA0, 0xC6, 0xD8}
 				}
 				vector.StrokeRect(screen, x+1, y+1, config.TileSize-2, config.TileSize-2, 2, hoverBorder, false)
 			}
@@ -158,13 +158,13 @@ func (g *Game) drawSummoners(screen *ebiten.Image) {
 		barX := float32(sx) - barW/2
 		barY := float32(sy) - float32(radius) - 10
 
-		hpColor := color.RGBA{0x2A, 0xD5, 0xA3, 0xFF}
+		hpColor := color.RGBA{0x8E, 0xE5, 0xA8, 0xFF}
 		if hpRatio < 0.3 {
-			hpColor = color.RGBA{0xFF, 0x5D, 0x73, 0xFF}
+			hpColor = color.RGBA{0xFF, 0x95, 0xB3, 0xFF}
 		} else if hpRatio < 0.6 {
-			hpColor = color.RGBA{0xFF, 0xD0, 0x65, 0xFF}
+			hpColor = color.RGBA{0xFF, 0xE0, 0x8D, 0xFF}
 		}
-		drawPixelBar(screen, barX, barY, barW, barH, hpRatio, hpColor, color.RGBA{0x0F, 0x16, 0x23, 0xFF})
+		drawPixelBar(screen, barX, barY, barW, barH, hpRatio, hpColor, color.RGBA{0xEF, 0xE0, 0xF7, 0xFF})
 
 		// Range indicator (subtle dashed circle)
 		if g.selectedCard < 0 {
@@ -178,7 +178,7 @@ func (g *Game) drawSummoners(screen *ebiten.Image) {
 					angle := float64(i) / float64(numDots) * math.Pi * 2
 					dotX := sx + math.Cos(angle)*rangePixels
 					dotY := sy + math.Sin(angle)*rangePixels
-					vector.FillRect(screen, float32(dotX), float32(dotY), 1, 1, color.RGBA{0x5D, 0x88, 0xAE, 0x70}, false)
+					vector.FillRect(screen, float32(dotX), float32(dotY), 1, 1, color.RGBA{0xD9, 0xBF, 0xF0, 0x90}, false)
 				}
 			}
 		}
@@ -210,7 +210,7 @@ func (g *Game) drawEnemies(screen *ebiten.Image) {
 		if e.Type == entity.EnemyBossOrc || e.Type == entity.EnemyFinalBoss {
 			glowAlpha := byte(60 + int(40*math.Sin(float64(g.animTick)*0.08)))
 			glowSize := float32(radius*1.8) + float32(4*math.Sin(float64(g.animTick)*0.05))
-			vector.FillCircle(screen, float32(e.X), float32(e.Y), glowSize, color.RGBA{0xFF, 0x8F, 0x5A, glowAlpha}, false)
+			vector.FillCircle(screen, float32(e.X), float32(e.Y), glowSize, color.RGBA{0xFF, 0xC6, 0xD8, glowAlpha}, false)
 		}
 
 		// Final boss aura ring
@@ -221,7 +221,7 @@ func (g *Game) drawEnemies(screen *ebiten.Image) {
 				angle := float64(i)/float64(numDots)*math.Pi*2 + float64(g.animTick)*0.03
 				dotX := float32(e.X) + float32(math.Cos(angle))*auraSize
 				dotY := float32(e.Y) + float32(math.Sin(angle))*auraSize
-				vector.FillRect(screen, dotX-1, dotY-1, 3, 3, color.RGBA{0xFF, 0x96, 0x6C, 0x99}, false)
+				vector.FillRect(screen, dotX-1, dotY-1, 3, 3, color.RGBA{0xC8, 0xB5, 0xF2, 0x99}, false)
 			}
 		}
 
@@ -234,7 +234,7 @@ func (g *Game) drawEnemies(screen *ebiten.Image) {
 		barX := float32(e.X) - barW/2
 		barY := float32(e.Y) - float32(radius) - 8
 
-		drawPixelBar(screen, barX, barY, barW, barH, hpRatio, color.RGBA{0xFF, 0x67, 0x7C, 0xFF}, color.RGBA{0x0F, 0x16, 0x23, 0xFF})
+		drawPixelBar(screen, barX, barY, barW, barH, hpRatio, color.RGBA{0xFF, 0xA5, 0xC4, 0xFF}, color.RGBA{0xEF, 0xE0, 0xF7, 0xFF})
 	}
 }
 
@@ -244,11 +244,11 @@ func (g *Game) drawProjectiles(screen *ebiten.Image) {
 	for _, p := range g.projectiles {
 		if p.IsFireball {
 			pulse := float32(4.0 + 0.8*math.Sin(float64(g.animTick)*0.3))
-			vector.FillCircle(screen, float32(p.X), float32(p.Y), pulse*1.25, color.RGBA{0xFF, 0x73, 0x6C, 0x55}, false)
-			vector.FillCircle(screen, float32(p.X), float32(p.Y), pulse, color.RGBA{0xFF, 0x95, 0x60, 0xD0}, false)
-			vector.FillCircle(screen, float32(p.X), float32(p.Y), pulse*0.45, color.RGBA{0xFF, 0xD8, 0x8A, 0xEE}, false)
+			vector.FillCircle(screen, float32(p.X), float32(p.Y), pulse*1.25, color.RGBA{0xFF, 0xB3, 0xC9, 0x68}, false)
+			vector.FillCircle(screen, float32(p.X), float32(p.Y), pulse, color.RGBA{0xFF, 0xC4, 0x93, 0xD8}, false)
+			vector.FillCircle(screen, float32(p.X), float32(p.Y), pulse*0.45, color.RGBA{0xFF, 0xF0, 0xBE, 0xF0}, false)
 		} else {
-			vector.FillCircle(screen, float32(p.X), float32(p.Y), 2.4, color.RGBA{0x8B, 0xE8, 0xEF, 0xD5}, false)
+			vector.FillCircle(screen, float32(p.X), float32(p.Y), 2.4, color.RGBA{0xA2, 0xE2, 0xF2, 0xE0}, false)
 		}
 	}
 }
@@ -262,29 +262,29 @@ func (g *Game) drawSummonerBase(screen *ebiten.Image) {
 	// Animated glow
 	glowAlpha := byte(40 + int(30*math.Sin(float64(g.animTick)*0.04)))
 	glowSize := float32(28 + 4*math.Sin(float64(g.animTick)*0.03))
-	vector.FillCircle(screen, float32(bx), float32(by), glowSize, color.RGBA{0x36, 0xD1, 0xDC, glowAlpha}, false)
+	vector.FillCircle(screen, float32(bx), float32(by), glowSize, color.RGBA{0x9A, 0xE6, 0xD4, glowAlpha}, false)
 
 	pulse := 18.0 + 1.5*math.Sin(float64(g.animTick)*0.05)
 	drawAvatarBadge(screen, bx, by, pulse, avatarStyle{
-		Outer: color.RGBA{0x2E, 0x4F, 0x76, 0xFF},
-		Inner: color.RGBA{0x87, 0xD5, 0xF3, 0xFF},
-		Ring:  color.RGBA{0xA7, 0xEA, 0xFF, 0xFF},
-		Glow:  color.RGBA{0x80, 0xE8, 0xF5, 0x75},
-		Text:  color.RGBA{0xF4, 0xFA, 0xFF, 0xFF},
-		Label: "B",
+		Outer: color.RGBA{0xD2, 0xC2, 0xF7, 0xFF},
+		Inner: color.RGBA{0xF2, 0xE9, 0xFF, 0xFF},
+		Ring:  color.RGBA{0xA6, 0xE9, 0xD5, 0xFF},
+		Glow:  color.RGBA{0xB8, 0xF2, 0xE5, 0x88},
+		Text:  color.RGBA{0x5A, 0x4D, 0x7A, 0xFF},
+		Label: "C",
 	})
 
 	// Label
-	drawKoreanTextWithShadow(screen, "기지", fontSmall, bx-10, by+18, color.RGBA{0xF3, 0xF8, 0xFF, 0xFF})
+	drawKoreanTextWithShadow(screen, "코어", fontSmall, bx-10, by+18, color.RGBA{0x5A, 0x4D, 0x7A, 0xFF})
 }
 
 // ---- Fireball mode indicator ----
 
 func (g *Game) drawFireballIndicator(screen *ebiten.Image) {
-	flash := byte(150 + int(105*math.Sin(float64(g.animTick)*0.15)))
-	drawKoreanTextWithShadow(screen, "화염구 준비: 타겟 지역을 클릭하세요", fontMedium,
+	flash := byte(140 + int(95*math.Sin(float64(g.animTick)*0.15)))
+	drawKoreanTextWithShadow(screen, "스킬 준비! 타겟 위치를 눌러주세요", fontMedium,
 		float64(config.ScreenWidth)/2-140, float64(config.ScreenHeight-config.HandHeight-30),
-		color.RGBA{0xFF, flash, 0x66, 0xFF})
+		color.RGBA{0xFF, flash, 0xB2, 0xFF})
 	// Animated border flash
-	vector.StrokeRect(screen, 0, 0, config.ScreenWidth, config.ScreenHeight, 2, color.RGBA{0xFF, flash, 0x66, flash}, false)
+	vector.StrokeRect(screen, 0, 0, config.ScreenWidth, config.ScreenHeight, 2, color.RGBA{0xFF, flash, 0xB2, flash}, false)
 }

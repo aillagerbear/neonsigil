@@ -33,9 +33,9 @@ var pixelPalette = map[byte]color.RGBA{
 
 // Theme colors
 var (
-	colorBG       = color.RGBA{0x05, 0x0b, 0x14, 0xFF}
-	colorUIBG     = color.RGBA{0x0f, 0x16, 0x22, 0xE8}
-	colorUIBorder = color.RGBA{0x37, 0x52, 0x72, 0xFF}
+	colorBG       = color.RGBA{0xF3, 0xE9, 0xFF, 0xFF}
+	colorUIBG     = color.RGBA{0xFF, 0xF5, 0xFD, 0xE8}
+	colorUIBorder = color.RGBA{0xE0, 0xAD, 0xE7, 0xFF}
 )
 
 // ---- Sprite data ----
@@ -426,34 +426,34 @@ func initSprites() *SpriteCache {
 
 	// Card background gradients
 	cache.CardBG = createGradientImage(config.CardWidth, config.CardHeight,
-		color.RGBA{0x15, 0x22, 0x33, 0xFF},
-		color.RGBA{0x0b, 0x13, 0x1f, 0xFF})
+		color.RGBA{0xFF, 0xF8, 0xFF, 0xFF},
+		color.RGBA{0xF2, 0xE9, 0xFF, 0xFF})
 	cache.CardBGHover = createGradientImage(config.CardWidth, config.CardHeight,
-		color.RGBA{0x1d, 0x31, 0x48, 0xFF},
-		color.RGBA{0x12, 0x1e, 0x30, 0xFF})
+		color.RGBA{0xFF, 0xFF, 0xFF, 0xFF},
+		color.RGBA{0xF9, 0xEC, 0xFF, 0xFF})
 	cache.RewardCardBG = createGradientImage(config.RewardCardWidth, config.RewardCardHeight,
-		color.RGBA{0x16, 0x25, 0x39, 0xFF},
-		color.RGBA{0x0b, 0x13, 0x1f, 0xFF})
+		color.RGBA{0xFF, 0xFA, 0xFF, 0xFF},
+		color.RGBA{0xF4, 0xEB, 0xFF, 0xFF})
 
 	// Tile textures
-	grassC1 := color.RGBA{0x1f, 0x33, 0x45, 0xFF}
-	grassC2 := color.RGBA{0x2d, 0x47, 0x5f, 0xFF}
-	grassBorder := color.RGBA{0x5a, 0x79, 0x99, 0xA8}
+	grassC1 := color.RGBA{0xF2, 0xF7, 0xFF, 0xFF}
+	grassC2 := color.RGBA{0xE7, 0xF2, 0xFF, 0xFF}
+	grassBorder := color.RGBA{0xB9, 0xD6, 0xEF, 0xCC}
 	cache.GrassTile = createDitheredTile(config.TileSize, grassC1, grassC2, 0.45, grassBorder)
 
-	occC1 := color.RGBA{0x3d, 0x2e, 0x2b, 0xFF}
-	occC2 := color.RGBA{0x4e, 0x39, 0x35, 0xFF}
-	occBorder := color.RGBA{0x7d, 0x5b, 0x56, 0xC0}
+	occC1 := color.RGBA{0xF6, 0xE9, 0xF4, 0xFF}
+	occC2 := color.RGBA{0xEE, 0xDC, 0xE9, 0xFF}
+	occBorder := color.RGBA{0xD9, 0xB7, 0xD0, 0xD4}
 	cache.OccupiedTile = createDitheredTile(config.TileSize, occC1, occC2, 0.40, occBorder)
 
-	hoverC1 := color.RGBA{0x25, 0x58, 0x64, 0xFF}
-	hoverC2 := color.RGBA{0x2f, 0x73, 0x82, 0xFF}
-	hoverBorder := color.RGBA{0x4f, 0xd0, 0xdd, 0xD0}
+	hoverC1 := color.RGBA{0xE4, 0xFC, 0xF5, 0xFF}
+	hoverC2 := color.RGBA{0xCB, 0xF4, 0xE8, 0xFF}
+	hoverBorder := color.RGBA{0x86, 0xE0, 0xCC, 0xE0}
 	cache.HoverTile = createDitheredTile(config.TileSize, hoverC1, hoverC2, 0.50, hoverBorder)
 
-	blockC1 := color.RGBA{0x5a, 0x25, 0x2f, 0xFF}
-	blockC2 := color.RGBA{0x72, 0x2d, 0x3a, 0xFF}
-	blockBorder := color.RGBA{0xbd, 0x58, 0x6c, 0xD8}
+	blockC1 := color.RGBA{0xFF, 0xE4, 0xEE, 0xFF}
+	blockC2 := color.RGBA{0xFF, 0xD3, 0xE4, 0xFF}
+	blockBorder := color.RGBA{0xF1, 0x98, 0xC4, 0xE2}
 	cache.BlockedTile = createDitheredTile(config.TileSize, blockC1, blockC2, 0.45, blockBorder)
 
 	return cache
@@ -471,7 +471,7 @@ func drawSpriteAt(screen *ebiten.Image, sprite *ebiten.Image, x, y, scale float6
 	shadowOp.GeoM.Translate(-w/2, -h/2)
 	shadowOp.GeoM.Scale(scale, scale)
 	shadowOp.GeoM.Translate(x+1.5, y+2.0)
-	shadowOp.ColorScale.Scale(0.02, 0.04, 0.07, 0.45)
+	shadowOp.ColorScale.Scale(0.35, 0.25, 0.45, 0.30)
 	shadowOp.Filter = ebiten.FilterLinear
 	screen.DrawImage(sprite, shadowOp)
 
@@ -502,14 +502,14 @@ func drawSpriteAtWithColor(screen *ebiten.Image, sprite *ebiten.Image, x, y, sca
 func drawPixelBar(screen *ebiten.Image, x, y, w, h float32, ratio float64, fillColor, bgColor color.RGBA) {
 	// Background
 	vector.FillRect(screen, x, y, w, h, bgColor, false)
-	vector.FillRect(screen, x, y, w, h*0.4, color.RGBA{0xA5, 0xC0, 0xDD, 0x20}, false)
+	vector.FillRect(screen, x, y, w, h*0.4, color.RGBA{0xFF, 0xFF, 0xFF, 0x70}, false)
 	// Fill
 	fillW := float32(ratio) * w
 	if fillW > 0 {
 		vector.FillRect(screen, x, y, fillW, h, fillColor, false)
 	}
 	// 1px border
-	vector.StrokeRect(screen, x, y, w, h, 1, color.RGBA{0x34, 0x4f, 0x6f, 0xCC}, false)
+	vector.StrokeRect(screen, x, y, w, h, 1, color.RGBA{0xD6, 0xAE, 0xE2, 0xE2}, false)
 	// Pixel highlight on top edge
 	if h > 2 && fillW > 2 {
 		highlightColor := lerpColor(fillColor, color.RGBA{0xFF, 0xFF, 0xFF, 0xFF}, 0.3)
@@ -536,7 +536,7 @@ func drawStars(screen *ebiten.Image, stars []Star, tick int) {
 	// Base gradient wash
 	for y := 0; y < config.ScreenHeight; y += 2 {
 		t := float64(y) / float64(config.ScreenHeight)
-		c := lerpColor(color.RGBA{0x06, 0x0d, 0x18, 0xFF}, color.RGBA{0x0d, 0x17, 0x28, 0xFF}, t)
+		c := lerpColor(color.RGBA{0xF9, 0xEE, 0xFF, 0xFF}, color.RGBA{0xE8, 0xF5, 0xFF, 0xFF}, t)
 		vector.FillRect(screen, 0, float32(y), config.ScreenWidth, 2, c, false)
 	}
 
@@ -546,8 +546,8 @@ func drawStars(screen *ebiten.Image, stars []Star, tick int) {
 		f := float64(i)
 		cx := float32(config.ScreenWidth)/2 + float32(math.Sin(shift+f*1.7))*150
 		cy := 120 + float32(i*90)
-		vector.FillCircle(screen, cx, cy, 180, color.RGBA{0x24, 0x62, 0x8D, 0x20}, false)
-		vector.FillCircle(screen, cx+60, cy+25, 160, color.RGBA{0x2D, 0x9A, 0xA6, 0x16}, false)
+		vector.FillCircle(screen, cx, cy, 180, color.RGBA{0xFF, 0xC5, 0xE5, 0x4A}, false)
+		vector.FillCircle(screen, cx+60, cy+25, 160, color.RGBA{0xB9, 0xF4, 0xE8, 0x44}, false)
 	}
 
 	for _, s := range stars {
@@ -556,7 +556,7 @@ func drawStars(screen *ebiten.Image, stars []Star, tick int) {
 		if a < 30 {
 			continue
 		}
-		clr := color.RGBA{s.Bright, s.Bright, 0xFF, a}
+		clr := color.RGBA{0xFF, byte(180 + int(s.Bright)/4), 0xF8, a}
 		size := float32(1)
 		if s.Bright > 220 {
 			size = 1.7
@@ -568,7 +568,7 @@ func drawStars(screen *ebiten.Image, stars []Star, tick int) {
 // ---- Path energy dots (algorithmic animation) ----
 
 func drawPathEnergyDots(screen *ebiten.Image, tick int) {
-	dotColor := color.RGBA{0x56, 0xD8, 0xE3, 0xB5}
+	dotColor := color.RGBA{0xF3, 0x9E, 0xCF, 0xB8}
 
 	numDots := 12
 	for i := 0; i < numDots; i++ {

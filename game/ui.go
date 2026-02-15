@@ -70,15 +70,15 @@ func borderedNineSlice(bg, border color.NRGBA, borderWidth int) *euiimage.NineSl
 }
 
 var (
-	uiColorDarkBG = color.NRGBA{0x0f, 0x16, 0x22, 0xD8}
-	uiColorBorder = color.NRGBA{0x39, 0x52, 0x72, 0xFF}
-	uiColorAccent = color.NRGBA{0x36, 0xd1, 0xdc, 0xFF}
-	uiColorGreen  = color.NRGBA{0x29, 0xd4, 0xa1, 0xFF}
-	uiColorRed    = color.NRGBA{0xff, 0x5d, 0x73, 0xFF}
-	uiColorYellow = color.NRGBA{0xff, 0xd5, 0x66, 0xFF}
-	uiColorOrange = color.NRGBA{0xff, 0x9d, 0x54, 0xFF}
-	uiColorWhite  = color.NRGBA{0xf3, 0xf8, 0xff, 0xFF}
-	uiColorGrey   = color.NRGBA{0x8f, 0xa1, 0xbb, 0xFF}
+	uiColorDarkBG = color.NRGBA{0xFF, 0xF5, 0xFD, 0xD8}
+	uiColorBorder = color.NRGBA{0xF3, 0x9B, 0xCE, 0xFF}
+	uiColorAccent = color.NRGBA{0x74, 0xE6, 0xD1, 0xFF}
+	uiColorGreen  = color.NRGBA{0x9B, 0xE7, 0xA5, 0xFF}
+	uiColorRed    = color.NRGBA{0xFF, 0x89, 0xAF, 0xFF}
+	uiColorYellow = color.NRGBA{0xFF, 0xE5, 0x97, 0xFF}
+	uiColorOrange = color.NRGBA{0xFF, 0xC6, 0x8E, 0xFF}
+	uiColorWhite  = color.NRGBA{0xFF, 0xFF, 0xFF, 0xFF}
+	uiColorGrey   = color.NRGBA{0x88, 0x7B, 0xA7, 0xFF}
 )
 
 func labelColor(c color.NRGBA) *widget.LabelColor {
@@ -89,7 +89,7 @@ func buttonImage(idle, hover, pressed color.NRGBA) *widget.ButtonImage {
 	return &widget.ButtonImage{
 		Idle:    borderedNineSlice(idle, uiColorBorder, 1),
 		Hover:   borderedNineSlice(hover, uiColorAccent, 1),
-		Pressed: borderedNineSlice(pressed, color.NRGBA{0x23, 0xaa, 0xb5, 0xFF}, 1),
+		Pressed: borderedNineSlice(pressed, uiColorYellow, 1),
 	}
 }
 
@@ -110,28 +110,28 @@ func (ui *UIManager) buildTitleUI() {
 		widget.ContainerOpts.WidgetOpts(widget.WidgetOpts.LayoutData(widget.AnchorLayoutData{
 			HorizontalPosition: widget.AnchorLayoutPositionCenter,
 			VerticalPosition:   widget.AnchorLayoutPositionCenter,
-			Padding:            &widget.Insets{Top: 120},
+			Padding:            &widget.Insets{Top: 116},
 		})),
 		widget.ContainerOpts.BackgroundImage(borderedNineSlice(
-			color.NRGBA{0x0d, 0x14, 0x20, 0xD8},
-			color.NRGBA{0x41, 0x67, 0x8d, 0xF0},
+			color.NRGBA{0xFF, 0xF8, 0xFF, 0xE8},
+			color.NRGBA{0xF0, 0xA3, 0xD2, 0xF0},
 			1,
 		)),
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
 			widget.RowLayoutOpts.Direction(widget.DirectionVertical),
-			widget.RowLayoutOpts.Spacing(10),
-			widget.RowLayoutOpts.Padding(&widget.Insets{Left: 26, Right: 26, Top: 24, Bottom: 24}),
+			widget.RowLayoutOpts.Spacing(11),
+			widget.RowLayoutOpts.Padding(&widget.Insets{Left: 30, Right: 30, Top: 26, Bottom: 26}),
 		)),
 	)
 
 	statusLabel := widget.NewLabel(
-		widget.LabelOpts.Text("STRATEGY DEFENSE", facePtr(fontSmall), labelColor(color.NRGBA{0x9f, 0xc8, 0xe8, 0xFF})),
+		widget.LabelOpts.Text("ACADEMY LIVE DEFENSE", facePtr(fontSmall), labelColor(color.NRGBA{0xEC, 0x76, 0xB4, 0xFF})),
 		widget.LabelOpts.TextOpts(widget.TextOpts.Position(widget.TextPositionCenter, widget.TextPositionCenter)),
 	)
 	centerPanel.AddChild(statusLabel)
 
 	subLabel := widget.NewLabel(
-		widget.LabelOpts.Text("자동전투 덱빌딩 디펜스", facePtr(fontMedium), labelColor(uiColorWhite)),
+		widget.LabelOpts.Text("소환학원 페스티벌 디펜스", facePtr(fontMedium), labelColor(color.NRGBA{0x57, 0x4A, 0x73, 0xFF})),
 		widget.LabelOpts.TextOpts(widget.TextOpts.Position(widget.TextPositionCenter, widget.TextPositionCenter)),
 	)
 	centerPanel.AddChild(subLabel)
@@ -143,12 +143,12 @@ func (ui *UIManager) buildTitleUI() {
 
 	startBtn := widget.NewButton(
 		widget.ButtonOpts.Image(buttonImage(
-			color.NRGBA{0x1a, 0x97, 0xa8, 0xFF},
-			color.NRGBA{0x25, 0xb9, 0xcd, 0xFF},
-			color.NRGBA{0x17, 0x7f, 0x8f, 0xFF},
+			color.NRGBA{0xF6, 0xAF, 0xD5, 0xFF},
+			color.NRGBA{0xFF, 0xCC, 0xE6, 0xFF},
+			color.NRGBA{0xE8, 0x96, 0xC1, 0xFF},
 		)),
-		widget.ButtonOpts.Text("게임 시작", facePtr(fontLarge), &widget.ButtonTextColor{
-			Idle: uiColorWhite,
+		widget.ButtonOpts.Text("무대 시작", facePtr(fontLarge), &widget.ButtonTextColor{
+			Idle: color.NRGBA{0x57, 0x4A, 0x73, 0xFF},
 		}),
 		widget.ButtonOpts.TextPadding(&widget.Insets{Left: 54, Right: 54, Top: 12, Bottom: 12}),
 		widget.ButtonOpts.WidgetOpts(widget.WidgetOpts.LayoutData(widget.RowLayoutData{
@@ -166,9 +166,9 @@ func (ui *UIManager) buildTitleUI() {
 	centerPanel.AddChild(spacer2)
 
 	instructions := []string{
-		"카드를 선택해 전장에 배치하세요.",
-		"유닛은 사거리 내 적을 자동으로 공격합니다.",
-		"10웨이브를 막아내면 승리합니다.",
+		"카드를 배치해 무대를 지켜요.",
+		"같은 종족을 모으면 시너지가 발동돼요.",
+		"10웨이브를 막아내면 공연 성공!",
 	}
 	for _, line := range instructions {
 		l := widget.NewLabel(
@@ -200,7 +200,7 @@ func (ui *UIManager) buildBattleUI() {
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
 			widget.RowLayoutOpts.Direction(widget.DirectionHorizontal),
 			widget.RowLayoutOpts.Spacing(20),
-			widget.RowLayoutOpts.Padding(&widget.Insets{Left: 18, Right: 18, Top: 9, Bottom: 9}),
+			widget.RowLayoutOpts.Padding(&widget.Insets{Left: 20, Right: 20, Top: 10, Bottom: 10}),
 		)),
 	)
 
@@ -210,7 +210,7 @@ func (ui *UIManager) buildBattleUI() {
 	topBar.AddChild(ui.waveLabel)
 
 	ui.enemyLabel = widget.NewLabel(
-		widget.LabelOpts.Text("적: 0", facePtr(fontMedium), labelColor(uiColorOrange)),
+		widget.LabelOpts.Text("남은 적: 0", facePtr(fontMedium), labelColor(uiColorOrange)),
 	)
 	topBar.AddChild(ui.enemyLabel)
 
@@ -232,11 +232,11 @@ func (ui *UIManager) buildBattleUI() {
 
 	ui.speedBtn1 = widget.NewButton(
 		widget.ButtonOpts.Image(buttonImage(
-			color.NRGBA{0x1a, 0x97, 0xa8, 0xFF},
-			color.NRGBA{0x25, 0xb9, 0xcd, 0xFF},
-			color.NRGBA{0x17, 0x7f, 0x8f, 0xFF},
+			color.NRGBA{0x9F, 0xEC, 0xDA, 0xFF},
+			color.NRGBA{0xBE, 0xF5, 0xE8, 0xFF},
+			color.NRGBA{0x80, 0xD9, 0xC2, 0xFF},
 		)),
-		widget.ButtonOpts.Text("1x", facePtr(fontSmall), &widget.ButtonTextColor{Idle: uiColorWhite}),
+		widget.ButtonOpts.Text("1x", facePtr(fontSmall), &widget.ButtonTextColor{Idle: color.NRGBA{0x57, 0x4A, 0x73, 0xFF}}),
 		widget.ButtonOpts.TextPadding(&widget.Insets{Left: 12, Right: 12, Top: 3, Bottom: 3}),
 		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
 			ui.onSpeedChange(1)
@@ -246,11 +246,11 @@ func (ui *UIManager) buildBattleUI() {
 
 	ui.speedBtn2 = widget.NewButton(
 		widget.ButtonOpts.Image(buttonImage(
-			color.NRGBA{0x1f, 0x2e, 0x42, 0xFF},
-			color.NRGBA{0x25, 0xb9, 0xcd, 0xFF},
-			color.NRGBA{0x17, 0x7f, 0x8f, 0xFF},
+			color.NRGBA{0xCC, 0xC2, 0xF6, 0xFF},
+			color.NRGBA{0xE3, 0xDD, 0xFF, 0xFF},
+			color.NRGBA{0xB6, 0xA8, 0xEE, 0xFF},
 		)),
-		widget.ButtonOpts.Text("2x", facePtr(fontSmall), &widget.ButtonTextColor{Idle: uiColorWhite}),
+		widget.ButtonOpts.Text("2x", facePtr(fontSmall), &widget.ButtonTextColor{Idle: color.NRGBA{0x57, 0x4A, 0x73, 0xFF}}),
 		widget.ButtonOpts.TextPadding(&widget.Insets{Left: 12, Right: 12, Top: 3, Bottom: 3}),
 		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
 			ui.onSpeedChange(2)
@@ -281,7 +281,7 @@ func (ui *UIManager) buildBattleUI() {
 	leftSide.AddChild(hpTitle)
 
 	ui.hpLabel = widget.NewLabel(
-		widget.LabelOpts.Text("100/100", facePtr(fontMedium), labelColor(uiColorWhite)),
+		widget.LabelOpts.Text("100/100", facePtr(fontMedium), labelColor(color.NRGBA{0x57, 0x4A, 0x73, 0xFF})),
 	)
 	leftSide.AddChild(ui.hpLabel)
 
@@ -291,7 +291,7 @@ func (ui *UIManager) buildBattleUI() {
 	leftSide.AddChild(manaTitle)
 
 	ui.manaLabel = widget.NewLabel(
-		widget.LabelOpts.Text("5/10", facePtr(fontMedium), labelColor(uiColorWhite)),
+		widget.LabelOpts.Text("5/10", facePtr(fontMedium), labelColor(color.NRGBA{0x57, 0x4A, 0x73, 0xFF})),
 	)
 	leftSide.AddChild(ui.manaLabel)
 
@@ -356,7 +356,7 @@ func (ui *UIManager) buildBattleUI() {
 
 func (ui *UIManager) buildEndUI() {
 	root := widget.NewContainer(
-		widget.ContainerOpts.BackgroundImage(nineSlice(color.NRGBA{0x04, 0x0b, 0x14, 0xE6})),
+		widget.ContainerOpts.BackgroundImage(nineSlice(color.NRGBA{0xF8, 0xEE, 0xFF, 0xEA})),
 		widget.ContainerOpts.Layout(widget.NewAnchorLayout()),
 	)
 
@@ -380,7 +380,7 @@ func (ui *UIManager) buildEndUI() {
 	centerPanel.AddChild(ui.endTitle)
 
 	ui.endMessage = widget.NewLabel(
-		widget.LabelOpts.Text("", facePtr(fontMedium), labelColor(uiColorWhite)),
+		widget.LabelOpts.Text("", facePtr(fontMedium), labelColor(color.NRGBA{0x57, 0x4A, 0x73, 0xFF})),
 		widget.LabelOpts.TextOpts(widget.TextOpts.Position(widget.TextPositionCenter, widget.TextPositionCenter)),
 	)
 	centerPanel.AddChild(ui.endMessage)
@@ -392,12 +392,12 @@ func (ui *UIManager) buildEndUI() {
 
 	restartBtn := widget.NewButton(
 		widget.ButtonOpts.Image(buttonImage(
-			color.NRGBA{0x1f, 0x2e, 0x42, 0xFF},
-			color.NRGBA{0x2f, 0x4c, 0x6d, 0xFF},
-			color.NRGBA{0x17, 0x24, 0x34, 0xFF},
+			color.NRGBA{0xCE, 0xC5, 0xF8, 0xFF},
+			color.NRGBA{0xEC, 0xD7, 0xFF, 0xFF},
+			color.NRGBA{0xB8, 0xAC, 0xEF, 0xFF},
 		)),
-		widget.ButtonOpts.Text("타이틀로 돌아가기", facePtr(fontMedium), &widget.ButtonTextColor{
-			Idle: uiColorWhite,
+		widget.ButtonOpts.Text("타이틀로 복귀", facePtr(fontMedium), &widget.ButtonTextColor{
+			Idle: color.NRGBA{0x57, 0x4A, 0x73, 0xFF},
 		}),
 		widget.ButtonOpts.TextPadding(&widget.Insets{Left: 30, Right: 30, Top: 10, Bottom: 10}),
 		widget.ButtonOpts.WidgetOpts(widget.WidgetOpts.LayoutData(widget.RowLayoutData{
@@ -427,7 +427,7 @@ func (ui *UIManager) updateBattleHUD(g *Game) {
 		}
 	}
 	aliveCount += len(g.spawnQueue)
-	ui.enemyLabel.Label = fmt.Sprintf("적: %d", aliveCount)
+	ui.enemyLabel.Label = fmt.Sprintf("남은 적: %d", aliveCount)
 
 	// FPS
 	ui.fpsLabel.Label = fmt.Sprintf("FPS: %.0f", ebiten.ActualFPS())
@@ -454,7 +454,7 @@ func (ui *UIManager) updateBattleHUD(g *Game) {
 	// Synergies
 	humanText := fmt.Sprintf("인간 %d/2", g.humanCount)
 	if g.humanSynergy {
-		humanText += " 활성"
+		humanText += " 발동"
 	}
 	ui.synHumanLabel.Label = humanText
 	if g.humanSynergy {
@@ -465,7 +465,7 @@ func (ui *UIManager) updateBattleHUD(g *Game) {
 
 	elfText := fmt.Sprintf("엘프 %d/2", g.elfCount)
 	if g.elfSynergy {
-		elfText += " 활성"
+		elfText += " 발동"
 	}
 	ui.synElfLabel.Label = elfText
 	if g.elfSynergy {
@@ -482,6 +482,6 @@ func (ui *UIManager) updateEndScreen(g *Game) {
 		ui.endMessage.Label = fmt.Sprintf("웨이브 %d/%d에서 패배했습니다", g.wave+1, g.maxWave)
 	} else {
 		ui.endTitle.Label = "승리!"
-		ui.endMessage.Label = "모든 10 웨이브를 방어했습니다!\n소환사가 안전합니다!"
+		ui.endMessage.Label = "모든 10 웨이브를 방어했습니다!\n축제 무대를 지켜냈어요!"
 	}
 }
