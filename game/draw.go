@@ -82,33 +82,58 @@ func (g *Game) drawPath(screen *ebiten.Image) {
 
 func (g *Game) drawGrid(screen *ebiten.Image) {
 	mx, my := ebiten.CursorPosition()
+	showPlacement := g.selectedCard >= 0
 
 	for row := 0; row < config.GridRows; row++ {
 		for col := 0; col < config.GridCols; col++ {
 			x := float32(config.GridStartX + col*config.TileSize)
 			y := float32(config.GridStartY + row*config.TileSize)
+			cx := x + float32(config.TileSize)/2
+			cy := y + float32(config.TileSize)/2
 
-			var tile *ebiten.Image
-			if g.grid[row][col] != nil {
+			if !showPlacement {
+				// Keep only a tiny anchor point so the map is visible while no card is selected.
+				vector.FillCircle(screen, cx, cy, 1.6, color.RGBA{0x63, 0x86, 0xAA, 0x55}, false)
+				continue
+			}
+
+			occupied := g.grid[row][col] != nil
+			tile := g.sprites.GrassTile
+			if occupied {
 				tile = g.sprites.OccupiedTile
-			} else {
-				tile = g.sprites.GrassTile
 			}
 
 			// Hover effect
-			if g.selectedCard >= 0 && mx >= int(x) && mx < int(x)+config.TileSize && my >= int(y) && my < int(y)+config.TileSize {
-				if g.grid[row][col] == nil {
+			isHover := mx >= int(x) && mx < int(x)+config.TileSize && my >= int(y) && my < int(y)+config.TileSize
+			if isHover {
+				if !occupied {
 					tile = g.sprites.HoverTile
 				} else {
 					tile = g.sprites.BlockedTile
 				}
 			}
 
-			// Draw tile texture
+			// Draw tile texture only while in placement mode.
 			op := &ebiten.DrawImageOptions{}
 			op.GeoM.Translate(float64(x), float64(y))
+			alpha := float32(0.56)
+			if occupied {
+				alpha = 0.48
+			}
+			if isHover {
+				alpha = 0.8
+			}
+			op.ColorScale.ScaleAlpha(alpha)
 			screen.DrawImage(tile, op)
-			vector.StrokeRect(screen, x, y, config.TileSize, config.TileSize, 1, color.RGBA{0x3A, 0x5B, 0x7D, 0x44}, false)
+			vector.StrokeRect(screen, x, y, config.TileSize, config.TileSize, 1, color.RGBA{0x3A, 0x5B, 0x7D, 0x5A}, false)
+
+			if isHover {
+				hoverBorder := color.RGBA{0x4f, 0xd0, 0xdd, 0xC8}
+				if occupied {
+					hoverBorder = color.RGBA{0xbd, 0x58, 0x6c, 0xD0}
+				}
+				vector.StrokeRect(screen, x+1, y+1, config.TileSize-2, config.TileSize-2, 2, hoverBorder, false)
+			}
 		}
 	}
 }
@@ -120,33 +145,18 @@ func (g *Game) drawSummoners(screen *ebiten.Image) {
 		sx := s.ScreenX
 		sy := s.ScreenY
 
-		// Get sprite for unit type
-		var sprite *ebiten.Image
-		switch s.Card.Type {
-		case entity.CardSoldier:
-			sprite = g.sprites.Soldier
-		case entity.CardArcher:
-			sprite = g.sprites.Archer
-		case entity.CardSpearman:
-			sprite = g.sprites.Spearman
-		case entity.CardMage:
-			sprite = g.sprites.Mage
-		}
-
-		// Attack flash effect
-		scale := 4.0
+		radius := 14.0
 		if s.AtkTimer == 0 {
-			scale = 4.5
+			radius = 16.0
 		}
-
-		drawSpriteAt(screen, sprite, sx, sy, scale)
+		drawAvatarBadge(screen, sx, sy, radius, cardAvatarStyle(s.Card.Type))
 
 		// Health bar (pixel style)
 		hpRatio := float64(s.CurrentHP) / float64(s.MaxHP)
-		barW := float32(32)
+		barW := float32(radius * 2.3)
 		barH := float32(4)
 		barX := float32(sx) - barW/2
-		barY := float32(sy) - 24
+		barY := float32(sy) - float32(radius) - 10
 
 		hpColor := color.RGBA{0x2A, 0xD5, 0xA3, 0xFF}
 		if hpRatio < 0.3 {
@@ -183,27 +193,23 @@ func (g *Game) drawEnemies(screen *ebiten.Image) {
 			continue
 		}
 
-		var sprite *ebiten.Image
-		var scale float64
+		style := enemyAvatarStyle(e.Type)
+		radius := 13.0
 		switch e.Type {
 		case entity.EnemyGoblin:
-			sprite = g.sprites.Goblin
-			scale = 3.0
+			radius = 12.0
 		case entity.EnemyOrc:
-			sprite = g.sprites.Orc
-			scale = 3.0
+			radius = 14.0
 		case entity.EnemyBossOrc:
-			sprite = g.sprites.BossOrc
-			scale = 3.0
+			radius = 18.0
 		case entity.EnemyFinalBoss:
-			sprite = g.sprites.FinalBoss
-			scale = 3.0
+			radius = 22.0
 		}
 
 		// Boss glow effect (animated)
 		if e.Type == entity.EnemyBossOrc || e.Type == entity.EnemyFinalBoss {
 			glowAlpha := byte(60 + int(40*math.Sin(float64(g.animTick)*0.08)))
-			glowSize := float32(scale*6) + float32(4*math.Sin(float64(g.animTick)*0.05))
+			glowSize := float32(radius*1.8) + float32(4*math.Sin(float64(g.animTick)*0.05))
 			vector.FillCircle(screen, float32(e.X), float32(e.Y), glowSize, color.RGBA{0xFF, 0x8F, 0x5A, glowAlpha}, false)
 		}
 
@@ -219,15 +225,14 @@ func (g *Game) drawEnemies(screen *ebiten.Image) {
 			}
 		}
 
-		drawSpriteAt(screen, sprite, e.X, e.Y, scale)
+		drawAvatarBadge(screen, e.X, e.Y, radius, style)
 
 		// Health bar
 		hpRatio := float64(e.HP) / float64(e.MaxHP)
-		spriteH := float64(sprite.Bounds().Dy()) * scale
-		barW := float32(scale * float64(sprite.Bounds().Dx()))
+		barW := float32(radius * 2.2)
 		barH := float32(3)
 		barX := float32(e.X) - barW/2
-		barY := float32(e.Y) - float32(spriteH)/2 - 6
+		barY := float32(e.Y) - float32(radius) - 8
 
 		drawPixelBar(screen, barX, barY, barW, barH, hpRatio, color.RGBA{0xFF, 0x67, 0x7C, 0xFF}, color.RGBA{0x0F, 0x16, 0x23, 0xFF})
 	}
@@ -238,10 +243,12 @@ func (g *Game) drawEnemies(screen *ebiten.Image) {
 func (g *Game) drawProjectiles(screen *ebiten.Image) {
 	for _, p := range g.projectiles {
 		if p.IsFireball {
-			scale := 3.0 + 0.5*math.Sin(float64(g.animTick)*0.3)
-			drawSpriteAt(screen, g.sprites.Fireball, p.X, p.Y, scale)
+			pulse := float32(4.0 + 0.8*math.Sin(float64(g.animTick)*0.3))
+			vector.FillCircle(screen, float32(p.X), float32(p.Y), pulse*1.25, color.RGBA{0xFF, 0x73, 0x6C, 0x55}, false)
+			vector.FillCircle(screen, float32(p.X), float32(p.Y), pulse, color.RGBA{0xFF, 0x95, 0x60, 0xD0}, false)
+			vector.FillCircle(screen, float32(p.X), float32(p.Y), pulse*0.45, color.RGBA{0xFF, 0xD8, 0x8A, 0xEE}, false)
 		} else {
-			drawSpriteAt(screen, g.sprites.Arrow, p.X, p.Y, 2.0)
+			vector.FillCircle(screen, float32(p.X), float32(p.Y), 2.4, color.RGBA{0x8B, 0xE8, 0xEF, 0xD5}, false)
 		}
 	}
 }
@@ -257,9 +264,15 @@ func (g *Game) drawSummonerBase(screen *ebiten.Image) {
 	glowSize := float32(28 + 4*math.Sin(float64(g.animTick)*0.03))
 	vector.FillCircle(screen, float32(bx), float32(by), glowSize, color.RGBA{0x36, 0xD1, 0xDC, glowAlpha}, false)
 
-	// Crystal sprite
-	pulse := 3.0 + 0.2*math.Sin(float64(g.animTick)*0.05)
-	drawSpriteAt(screen, g.sprites.Base, bx, by, pulse)
+	pulse := 18.0 + 1.5*math.Sin(float64(g.animTick)*0.05)
+	drawAvatarBadge(screen, bx, by, pulse, avatarStyle{
+		Outer: color.RGBA{0x2E, 0x4F, 0x76, 0xFF},
+		Inner: color.RGBA{0x87, 0xD5, 0xF3, 0xFF},
+		Ring:  color.RGBA{0xA7, 0xEA, 0xFF, 0xFF},
+		Glow:  color.RGBA{0x80, 0xE8, 0xF5, 0x75},
+		Text:  color.RGBA{0xF4, 0xFA, 0xFF, 0xFF},
+		Label: "B",
+	})
 
 	// Label
 	drawKoreanTextWithShadow(screen, "기지", fontSmall, bx-10, by+18, color.RGBA{0xF3, 0xF8, 0xFF, 0xFF})

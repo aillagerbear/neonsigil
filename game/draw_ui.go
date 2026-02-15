@@ -58,25 +58,6 @@ func raceBorderColor(race entity.Race) color.NRGBA {
 	}
 }
 
-// ---- Helper: get unit sprite ----
-
-func (g *Game) getCardSprite(cardType entity.CardType) *ebiten.Image {
-	switch cardType {
-	case entity.CardSoldier:
-		return g.sprites.Soldier
-	case entity.CardArcher:
-		return g.sprites.Archer
-	case entity.CardSpearman:
-		return g.sprites.Spearman
-	case entity.CardMage:
-		return g.sprites.Mage
-	case entity.CardFireball:
-		return g.sprites.Fireball
-	default:
-		return nil
-	}
-}
-
 // ---- Draw Cost Badge ----
 
 func drawCostBadge(screen *ebiten.Image, cost int, x, y float64, affordable bool) {
@@ -166,17 +147,10 @@ func (g *Game) drawSingleCard(screen *ebiten.Image, card entity.CardData, x, y f
 	// Cost badge (top-left)
 	drawCostBadge(screen, card.Cost, float64(fx)+16, float64(fy)+16, canAfford)
 
-	// Unit sprite (centered in upper portion)
-	sprite := g.getCardSprite(card.Type)
-	if sprite != nil {
-		spriteScale := 5.0
-		if card.Type == entity.CardFireball {
-			spriteScale = 6.0
-		}
-		spriteCenterX := float64(fx) + float64(fw)/2
-		spriteCenterY := float64(fy) + 50
-		drawSpriteAt(screen, sprite, spriteCenterX, spriteCenterY, spriteScale)
-	}
+	// Unit portrait (modern badge style)
+	spriteCenterX := float64(fx) + float64(fw)/2
+	spriteCenterY := float64(fy) + 50
+	drawAvatarBadge(screen, spriteCenterX, spriteCenterY, 18, cardAvatarStyle(card.Type))
 
 	curY += 75
 
@@ -507,15 +481,8 @@ func (g *Game) drawRewardCard(screen *ebiten.Image, card entity.CardData, x, y, 
 	// Cost badge
 	drawCostBadge(screen, card.Cost, float64(fx)+18, float64(fy)+18, true)
 
-	// Unit sprite
-	sprite := g.getCardSprite(card.Type)
-	if sprite != nil {
-		spriteScale := 6.0
-		if card.Type == entity.CardFireball {
-			spriteScale = 7.0
-		}
-		drawSpriteAt(screen, sprite, float64(fx)+float64(fw)/2, float64(fy)+70, spriteScale)
-	}
+	// Unit portrait
+	drawAvatarBadge(screen, float64(fx)+float64(fw)/2, float64(fy)+70, 26, cardAvatarStyle(card.Type))
 
 	curY := float64(fy) + 110
 
@@ -636,19 +603,19 @@ func (g *Game) drawTitleDecorations(screen *ebiten.Image) {
 	// Animated floating sprites in background
 	sx := 170 + 26*math.Sin(t*0.01)
 	sy := 322 + 18*math.Cos(t*0.015)
-	drawSpriteAtWithColor(screen, g.sprites.Soldier, sx, sy, 4.2, 0.42, 0.70, 0.95, 0.45)
+	drawAvatarBadge(screen, sx, sy, 22, cardAvatarStyle(entity.CardSoldier))
 
 	ax := 856 + 23*math.Cos(t*0.012)
 	ay := 350 + 14*math.Sin(t*0.018)
-	drawSpriteAtWithColor(screen, g.sprites.Archer, ax, ay, 4.1, 0.45, 0.78, 0.58, 0.40)
+	drawAvatarBadge(screen, ax, ay, 22, cardAvatarStyle(entity.CardArcher))
 
 	gx := 218 + 18*math.Sin(t*0.008+1.5)
 	gy := 514 + 14*math.Cos(t*0.013)
-	drawSpriteAtWithColor(screen, g.sprites.Goblin, gx, gy, 3.2, 0.85, 0.56, 0.56, 0.24)
+	drawAvatarBadge(screen, gx, gy, 18, enemyAvatarStyle(entity.EnemyGoblin))
 
 	mx := 808 + 24*math.Cos(t*0.011+2.0)
 	my := 210 + 16*math.Sin(t*0.016)
-	drawSpriteAtWithColor(screen, g.sprites.Mage, mx, my, 4.2, 0.66, 0.58, 0.92, 0.35)
+	drawAvatarBadge(screen, mx, my, 22, cardAvatarStyle(entity.CardMage))
 
 	// Title logo
 	titleTop := "SUMMONER'S"
