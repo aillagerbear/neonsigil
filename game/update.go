@@ -28,7 +28,7 @@ func (g *Game) initBattle() {
 	g.ticks = 0
 	g.endScreenReady = false
 
-	// 초기 덱 생성: 전사 4장 + 궁수 4장
+	// 초기 덱 생성: 전사/궁수 중심 + 창병/마법사 보강
 	g.deck = nil
 	for i := 0; i < 4; i++ {
 		g.deck = append(g.deck, entity.Card{Data: entity.CardTemplates[entity.CardSoldier]})
@@ -36,6 +36,13 @@ func (g *Game) initBattle() {
 	for i := 0; i < 4; i++ {
 		g.deck = append(g.deck, entity.Card{Data: entity.CardTemplates[entity.CardArcher]})
 	}
+	for i := 0; i < 2; i++ {
+		g.deck = append(g.deck, entity.Card{Data: entity.CardTemplates[entity.CardSpearman]})
+	}
+	for i := 0; i < 2; i++ {
+		g.deck = append(g.deck, entity.Card{Data: entity.CardTemplates[entity.CardMage]})
+	}
+	g.deck = append(g.deck, entity.Card{Data: entity.CardTemplates[entity.CardFireball]})
 	g.shuffleDeck()
 
 	// 초기 핸드 드로우
@@ -468,10 +475,31 @@ func (g *Game) prepareReward() {
 	g.rewardCards = nil
 	g.rewardHover = -1
 
-	allTypes := []entity.CardType{entity.CardSoldier, entity.CardArcher, entity.CardSpearman, entity.CardMage, entity.CardFireball}
-	// 3장의 랜덤 카드 제시
-	for i := 0; i < 3; i++ {
-		ct := allTypes[rand.Intn(len(allTypes))]
+	// 3장의 보상 카드는 중복 없이 제시하고, 최소 1장은 확장 카드(창병/마법사/화염구) 보장
+	pool := []entity.CardType{
+		entity.CardSoldier,
+		entity.CardArcher,
+		entity.CardSpearman,
+		entity.CardMage,
+		entity.CardFireball,
+	}
+	advancedPool := []entity.CardType{
+		entity.CardSpearman,
+		entity.CardMage,
+		entity.CardFireball,
+	}
+
+	chosenSet := map[entity.CardType]bool{}
+	first := advancedPool[rand.Intn(len(advancedPool))]
+	chosenSet[first] = true
+	g.rewardCards = append(g.rewardCards, entity.Card{Data: entity.CardTemplates[first]})
+
+	for len(g.rewardCards) < 3 {
+		ct := pool[rand.Intn(len(pool))]
+		if chosenSet[ct] {
+			continue
+		}
+		chosenSet[ct] = true
 		g.rewardCards = append(g.rewardCards, entity.Card{Data: entity.CardTemplates[ct]})
 	}
 }

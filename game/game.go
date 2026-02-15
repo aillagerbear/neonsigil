@@ -10,7 +10,7 @@ import (
 // CardRect represents the screen area of a drawn card for click detection
 type CardRect struct {
 	X, Y, W, H float64
-	Index       int
+	Index      int
 }
 
 // Game implements the ebiten.Game interface and holds all game state.
@@ -187,15 +187,19 @@ func (g *Game) handleRewardSelect(index int) {
 		return
 	}
 
-	g.deck = append(g.deck, g.rewardCards[index])
-	g.shuffleDeck()
+	chosen := g.rewardCards[index]
 
-	for len(g.hand) < config.MaxHandSize {
-		if len(g.deck) == 0 && len(g.graveyard) == 0 {
-			break
-		}
+	// 선택 보상이 즉시 체감되도록 덱 맨 위에 넣고, 손패 여유가 있으면 바로 드로우
+	g.deck = append([]entity.Card{chosen}, g.deck...)
+	if len(g.hand) < config.MaxHandSize {
 		g.drawCard()
 	}
+
+	g.rewardCards = nil
+	g.rewardHover = -1
+	g.hoverReward = -1
+	g.selectedCard = -1
+	g.fireballMode = false
 
 	g.wave++
 	g.state = entity.StateBattle
