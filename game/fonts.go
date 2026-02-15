@@ -7,11 +7,15 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
-//go:embed fonts/NotoSansKR.ttf
-var fontTTF []byte
+//go:embed fonts/Pretendard-Regular.otf
+var fontRegularData []byte
+
+//go:embed fonts/Pretendard-Bold.otf
+var fontBoldData []byte
 
 var (
-	fontSource *text.GoTextFaceSource
+	fontRegularSource *text.GoTextFaceSource
+	fontBoldSource    *text.GoTextFaceSource
 
 	// Stored as text.Face so we can take &fontXxx for ebitenui (which wants *text.Face)
 	fontSmall    text.Face
@@ -30,21 +34,25 @@ var (
 )
 
 func initFonts() {
-	fontSource, err := text.NewGoTextFaceSource(bytes.NewReader(fontTTF))
+	fontRegularSource, err := text.NewGoTextFaceSource(bytes.NewReader(fontRegularData))
+	if err != nil {
+		panic("폰트 로드 실패: " + err.Error())
+	}
+	fontBoldSource, err = text.NewGoTextFaceSource(bytes.NewReader(fontBoldData))
 	if err != nil {
 		panic("폰트 로드 실패: " + err.Error())
 	}
 
-	goFontSmall = &text.GoTextFace{Source: fontSource, Size: 11}
-	goFontMedium = &text.GoTextFace{Source: fontSource, Size: 14}
-	goFontLarge = &text.GoTextFace{Source: fontSource, Size: 18}
+	goFontSmall = &text.GoTextFace{Source: fontRegularSource, Size: 12}
+	goFontMedium = &text.GoTextFace{Source: fontRegularSource, Size: 15}
+	goFontLarge = &text.GoTextFace{Source: fontBoldSource, Size: 20}
 
 	fontSmall = goFontSmall
-	fontCardInfo = &text.GoTextFace{Source: fontSource, Size: 12}
-	fontCardName = &text.GoTextFace{Source: fontSource, Size: 13}
-	fontCardCost = &text.GoTextFace{Source: fontSource, Size: 16}
-	fontBarValue = &text.GoTextFace{Source: fontSource, Size: 10}
+	fontCardInfo = &text.GoTextFace{Source: fontRegularSource, Size: 12}
+	fontCardName = &text.GoTextFace{Source: fontBoldSource, Size: 14}
+	fontCardCost = &text.GoTextFace{Source: fontBoldSource, Size: 16}
+	fontBarValue = &text.GoTextFace{Source: fontBoldSource, Size: 11}
 	fontMedium = goFontMedium
 	fontLarge = goFontLarge
-	fontTitle = &text.GoTextFace{Source: fontSource, Size: 28}
+	fontTitle = &text.GoTextFace{Source: fontBoldSource, Size: 34}
 }

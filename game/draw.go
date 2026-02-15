@@ -47,8 +47,8 @@ func (g *Game) drawBattle(screen *ebiten.Image) {
 // ---- Path ----
 
 func (g *Game) drawPath(screen *ebiten.Image) {
-	pathColor := color.RGBA{0x25, 0x25, 0x35, 0xFF}
-	pathBorder := color.RGBA{0x30, 0x30, 0x45, 0x88}
+	pathColor := color.RGBA{0x1b, 0x24, 0x34, 0xE8}
+	pathBorder := color.RGBA{0x3c, 0x59, 0x79, 0xAA}
 	pathWidth := float32(32)
 	halfW := pathWidth / 2
 
@@ -70,6 +70,7 @@ func (g *Game) drawPath(screen *ebiten.Image) {
 		}
 
 		vector.FillRect(screen, rx, ry, rw, rh, pathColor, false)
+		vector.FillRect(screen, rx+1, ry+1, rw-2, rh*0.34, color.RGBA{0x6B, 0x91, 0xB8, 0x1D}, false)
 		vector.StrokeRect(screen, rx, ry, rw, rh, 1, pathBorder, false)
 	}
 
@@ -107,6 +108,7 @@ func (g *Game) drawGrid(screen *ebiten.Image) {
 			op := &ebiten.DrawImageOptions{}
 			op.GeoM.Translate(float64(x), float64(y))
 			screen.DrawImage(tile, op)
+			vector.StrokeRect(screen, x, y, config.TileSize, config.TileSize, 1, color.RGBA{0x3A, 0x5B, 0x7D, 0x44}, false)
 		}
 	}
 }
@@ -146,13 +148,13 @@ func (g *Game) drawSummoners(screen *ebiten.Image) {
 		barX := float32(sx) - barW/2
 		barY := float32(sy) - 24
 
-		hpColor := pixelPalette['b'] // green
+		hpColor := color.RGBA{0x2A, 0xD5, 0xA3, 0xFF}
 		if hpRatio < 0.3 {
-			hpColor = pixelPalette['8'] // red
+			hpColor = color.RGBA{0xFF, 0x5D, 0x73, 0xFF}
 		} else if hpRatio < 0.6 {
-			hpColor = pixelPalette['a'] // yellow
+			hpColor = color.RGBA{0xFF, 0xD0, 0x65, 0xFF}
 		}
-		drawPixelBar(screen, barX, barY, barW, barH, hpRatio, hpColor, color.RGBA{0x20, 0x20, 0x20, 0xFF})
+		drawPixelBar(screen, barX, barY, barW, barH, hpRatio, hpColor, color.RGBA{0x0F, 0x16, 0x23, 0xFF})
 
 		// Range indicator (subtle dashed circle)
 		if g.selectedCard < 0 {
@@ -166,7 +168,7 @@ func (g *Game) drawSummoners(screen *ebiten.Image) {
 					angle := float64(i) / float64(numDots) * math.Pi * 2
 					dotX := sx + math.Cos(angle)*rangePixels
 					dotY := sy + math.Sin(angle)*rangePixels
-					vector.FillRect(screen, float32(dotX), float32(dotY), 1, 1, color.RGBA{0x50, 0x50, 0x70, 0x60}, false)
+					vector.FillRect(screen, float32(dotX), float32(dotY), 1, 1, color.RGBA{0x5D, 0x88, 0xAE, 0x70}, false)
 				}
 			}
 		}
@@ -202,7 +204,7 @@ func (g *Game) drawEnemies(screen *ebiten.Image) {
 		if e.Type == entity.EnemyBossOrc || e.Type == entity.EnemyFinalBoss {
 			glowAlpha := byte(60 + int(40*math.Sin(float64(g.animTick)*0.08)))
 			glowSize := float32(scale*6) + float32(4*math.Sin(float64(g.animTick)*0.05))
-			vector.FillCircle(screen, float32(e.X), float32(e.Y), glowSize, color.RGBA{0xFF, 0xA0, 0x00, glowAlpha}, false)
+			vector.FillCircle(screen, float32(e.X), float32(e.Y), glowSize, color.RGBA{0xFF, 0x8F, 0x5A, glowAlpha}, false)
 		}
 
 		// Final boss aura ring
@@ -213,7 +215,7 @@ func (g *Game) drawEnemies(screen *ebiten.Image) {
 				angle := float64(i)/float64(numDots)*math.Pi*2 + float64(g.animTick)*0.03
 				dotX := float32(e.X) + float32(math.Cos(angle))*auraSize
 				dotY := float32(e.Y) + float32(math.Sin(angle))*auraSize
-				vector.FillRect(screen, dotX-1, dotY-1, 3, 3, color.RGBA{0xFF, 0x80, 0x00, 0x99}, false)
+				vector.FillRect(screen, dotX-1, dotY-1, 3, 3, color.RGBA{0xFF, 0x96, 0x6C, 0x99}, false)
 			}
 		}
 
@@ -227,7 +229,7 @@ func (g *Game) drawEnemies(screen *ebiten.Image) {
 		barX := float32(e.X) - barW/2
 		barY := float32(e.Y) - float32(spriteH)/2 - 6
 
-		drawPixelBar(screen, barX, barY, barW, barH, hpRatio, pixelPalette['8'], color.RGBA{0x20, 0x20, 0x20, 0xFF})
+		drawPixelBar(screen, barX, barY, barW, barH, hpRatio, color.RGBA{0xFF, 0x67, 0x7C, 0xFF}, color.RGBA{0x0F, 0x16, 0x23, 0xFF})
 	}
 }
 
@@ -253,24 +255,23 @@ func (g *Game) drawSummonerBase(screen *ebiten.Image) {
 	// Animated glow
 	glowAlpha := byte(40 + int(30*math.Sin(float64(g.animTick)*0.04)))
 	glowSize := float32(28 + 4*math.Sin(float64(g.animTick)*0.03))
-	vector.FillCircle(screen, float32(bx), float32(by), glowSize, color.RGBA{0x29, 0xAD, 0xFF, glowAlpha}, false)
+	vector.FillCircle(screen, float32(bx), float32(by), glowSize, color.RGBA{0x36, 0xD1, 0xDC, glowAlpha}, false)
 
 	// Crystal sprite
 	pulse := 3.0 + 0.2*math.Sin(float64(g.animTick)*0.05)
 	drawSpriteAt(screen, g.sprites.Base, bx, by, pulse)
 
 	// Label
-	drawKoreanTextWithShadow(screen, "기지", fontSmall, bx-10, by+18, color.RGBA{0xFF, 0xF1, 0xE8, 0xFF})
+	drawKoreanTextWithShadow(screen, "기지", fontSmall, bx-10, by+18, color.RGBA{0xF3, 0xF8, 0xFF, 0xFF})
 }
 
 // ---- Fireball mode indicator ----
 
 func (g *Game) drawFireballIndicator(screen *ebiten.Image) {
 	flash := byte(150 + int(105*math.Sin(float64(g.animTick)*0.15)))
-	drawKoreanTextWithShadow(screen, ">> 화염구: 타겟 지역을 클릭하세요! <<", fontMedium,
+	drawKoreanTextWithShadow(screen, "화염구 준비: 타겟 지역을 클릭하세요", fontMedium,
 		float64(config.ScreenWidth)/2-140, float64(config.ScreenHeight-config.HandHeight-30),
-		color.RGBA{0xFF, flash, 0x00, 0xFF})
+		color.RGBA{0xFF, flash, 0x66, 0xFF})
 	// Animated border flash
-	vector.StrokeRect(screen, 0, 0, config.ScreenWidth, config.ScreenHeight, 2, color.RGBA{0xFF, flash, 0x00, flash}, false)
+	vector.StrokeRect(screen, 0, 0, config.ScreenWidth, config.ScreenHeight, 2, color.RGBA{0xFF, flash, 0x66, flash}, false)
 }
-

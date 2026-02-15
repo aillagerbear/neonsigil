@@ -62,7 +62,7 @@ func (g *Game) spawnDeathParticles(x, y float64, baseColor color.RGBA) {
 		// Vary the color slightly
 		c := baseColor
 		if rand.Intn(3) == 0 {
-			c = pixelPalette['a'] // yellow flash
+			c = color.RGBA{0xFF, 0xD5, 0x6B, 0xFF}
 		}
 
 		g.particles = append(g.particles, Particle{
@@ -93,7 +93,7 @@ func (g *Game) spawnHitParticles(x, y float64) {
 			VY:      math.Sin(angle)*speed - 0.5,
 			Life:    life,
 			MaxLife: life,
-			Color:   pixelPalette['7'], // white sparkle
+			Color:   color.RGBA{0xE5, 0xF6, 0xFF, 0xFF},
 			Size:    1 + rand.Float64()*2,
 		})
 	}
@@ -102,9 +102,9 @@ func (g *Game) spawnHitParticles(x, y float64) {
 // spawnFireballExplosion creates a large fiery explosion
 func (g *Game) spawnFireballExplosion(x, y float64) {
 	colors := []color.RGBA{
-		pixelPalette['8'], // red
-		pixelPalette['9'], // orange
-		pixelPalette['a'], // yellow
+		{0xFF, 0x63, 0x79, 0xFF},
+		{0xFF, 0x97, 0x64, 0xFF},
+		{0xFF, 0xC9, 0x6F, 0xFF},
 	}
 	count := 20 + rand.Intn(10)
 	for i := 0; i < count; i++ {
@@ -130,11 +130,14 @@ func (g *Game) spawnTrailParticle(x, y float64, isFireball bool) {
 	var c color.RGBA
 	var sz float64
 	if isFireball {
-		colors := []color.RGBA{pixelPalette['9'], pixelPalette['8']}
+		colors := []color.RGBA{
+			{0xFF, 0x97, 0x64, 0xFF},
+			{0xFF, 0x63, 0x79, 0xFF},
+		}
 		c = colors[rand.Intn(len(colors))]
 		sz = 2 + rand.Float64()*2
 	} else {
-		c = pixelPalette['a'] // yellow trail
+		c = color.RGBA{0x8B, 0xE8, 0xEF, 0xFF}
 		sz = 1 + rand.Float64()
 	}
 
@@ -162,7 +165,7 @@ func (g *Game) spawnPlaceParticles(x, y float64) {
 			VY:      math.Sin(angle) * speed,
 			Life:    15,
 			MaxLife: 15,
-			Color:   pixelPalette['c'], // blue sparkle
+			Color:   color.RGBA{0x56, 0xD8, 0xE3, 0xFF},
 			Size:    2,
 		})
 	}

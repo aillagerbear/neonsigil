@@ -70,15 +70,15 @@ func borderedNineSlice(bg, border color.NRGBA, borderWidth int) *euiimage.NineSl
 }
 
 var (
-	uiColorDarkBG    = color.NRGBA{0x12, 0x12, 0x20, 0xF0}
-	uiColorBorder    = color.NRGBA{0x3a, 0x3a, 0x5a, 0xFF}
-	uiColorAccent    = color.NRGBA{0x29, 0xAD, 0xFF, 0xFF}
-	uiColorGreen     = color.NRGBA{0x00, 0xE4, 0x36, 0xFF}
-	uiColorRed       = color.NRGBA{0xFF, 0x00, 0x4D, 0xFF}
-	uiColorYellow    = color.NRGBA{0xFF, 0xEC, 0x27, 0xFF}
-	uiColorOrange    = color.NRGBA{0xFF, 0xA3, 0x00, 0xFF}
-	uiColorWhite     = color.NRGBA{0xFF, 0xF1, 0xE8, 0xFF}
-	uiColorGrey = color.NRGBA{0x80, 0x80, 0x90, 0xFF}
+	uiColorDarkBG = color.NRGBA{0x0f, 0x16, 0x22, 0xD8}
+	uiColorBorder = color.NRGBA{0x39, 0x52, 0x72, 0xFF}
+	uiColorAccent = color.NRGBA{0x36, 0xd1, 0xdc, 0xFF}
+	uiColorGreen  = color.NRGBA{0x29, 0xd4, 0xa1, 0xFF}
+	uiColorRed    = color.NRGBA{0xff, 0x5d, 0x73, 0xFF}
+	uiColorYellow = color.NRGBA{0xff, 0xd5, 0x66, 0xFF}
+	uiColorOrange = color.NRGBA{0xff, 0x9d, 0x54, 0xFF}
+	uiColorWhite  = color.NRGBA{0xf3, 0xf8, 0xff, 0xFF}
+	uiColorGrey   = color.NRGBA{0x8f, 0xa1, 0xbb, 0xFF}
 )
 
 func labelColor(c color.NRGBA) *widget.LabelColor {
@@ -87,9 +87,9 @@ func labelColor(c color.NRGBA) *widget.LabelColor {
 
 func buttonImage(idle, hover, pressed color.NRGBA) *widget.ButtonImage {
 	return &widget.ButtonImage{
-		Idle:    borderedNineSlice(idle, uiColorBorder, 2),
-		Hover:   borderedNineSlice(hover, uiColorAccent, 2),
-		Pressed: borderedNineSlice(pressed, uiColorAccent, 2),
+		Idle:    borderedNineSlice(idle, uiColorBorder, 1),
+		Hover:   borderedNineSlice(hover, uiColorAccent, 1),
+		Pressed: borderedNineSlice(pressed, color.NRGBA{0x23, 0xaa, 0xb5, 0xFF}, 1),
 	}
 }
 
@@ -102,7 +102,7 @@ func facePtr(f text.Face) *text.Face {
 
 func (ui *UIManager) buildTitleUI() {
 	root := widget.NewContainer(
-		widget.ContainerOpts.BackgroundImage(nineSlice(color.NRGBA{0x08, 0x08, 0x12, 0xFF})),
+		widget.ContainerOpts.BackgroundImage(nineSlice(color.NRGBA{0x00, 0x00, 0x00, 0x00})),
 		widget.ContainerOpts.Layout(widget.NewAnchorLayout()),
 	)
 
@@ -110,45 +110,47 @@ func (ui *UIManager) buildTitleUI() {
 		widget.ContainerOpts.WidgetOpts(widget.WidgetOpts.LayoutData(widget.AnchorLayoutData{
 			HorizontalPosition: widget.AnchorLayoutPositionCenter,
 			VerticalPosition:   widget.AnchorLayoutPositionCenter,
+			Padding:            &widget.Insets{Top: 120},
 		})),
+		widget.ContainerOpts.BackgroundImage(borderedNineSlice(
+			color.NRGBA{0x0d, 0x14, 0x20, 0xD8},
+			color.NRGBA{0x41, 0x67, 0x8d, 0xF0},
+			1,
+		)),
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
 			widget.RowLayoutOpts.Direction(widget.DirectionVertical),
-			widget.RowLayoutOpts.Spacing(12),
-			widget.RowLayoutOpts.Padding(widget.NewInsetsSimple(30)),
+			widget.RowLayoutOpts.Spacing(10),
+			widget.RowLayoutOpts.Padding(&widget.Insets{Left: 26, Right: 26, Top: 24, Bottom: 24}),
 		)),
 	)
 
-	// Title
-	titleLabel := widget.NewLabel(
-		widget.LabelOpts.Text("소환사의 수호", facePtr(fontTitle), labelColor(uiColorAccent)),
+	statusLabel := widget.NewLabel(
+		widget.LabelOpts.Text("STRATEGY DEFENSE", facePtr(fontSmall), labelColor(color.NRGBA{0x9f, 0xc8, 0xe8, 0xFF})),
 		widget.LabelOpts.TextOpts(widget.TextOpts.Position(widget.TextPositionCenter, widget.TextPositionCenter)),
 	)
-	centerPanel.AddChild(titleLabel)
+	centerPanel.AddChild(statusLabel)
 
-	// Subtitle
 	subLabel := widget.NewLabel(
-		widget.LabelOpts.Text("자동전투 덱빌딩 디펜스", facePtr(fontLarge), labelColor(uiColorWhite)),
+		widget.LabelOpts.Text("자동전투 덱빌딩 디펜스", facePtr(fontMedium), labelColor(uiColorWhite)),
 		widget.LabelOpts.TextOpts(widget.TextOpts.Position(widget.TextPositionCenter, widget.TextPositionCenter)),
 	)
 	centerPanel.AddChild(subLabel)
 
-	// Spacer
 	spacer := widget.NewContainer(
-		widget.ContainerOpts.WidgetOpts(widget.WidgetOpts.MinSize(0, 20)),
+		widget.ContainerOpts.WidgetOpts(widget.WidgetOpts.MinSize(0, 10)),
 	)
 	centerPanel.AddChild(spacer)
 
-	// Start button
 	startBtn := widget.NewButton(
 		widget.ButtonOpts.Image(buttonImage(
-			color.NRGBA{0x00, 0x60, 0x30, 0xFF},
-			color.NRGBA{0x00, 0x87, 0x51, 0xFF},
-			color.NRGBA{0x00, 0x50, 0x28, 0xFF},
+			color.NRGBA{0x1a, 0x97, 0xa8, 0xFF},
+			color.NRGBA{0x25, 0xb9, 0xcd, 0xFF},
+			color.NRGBA{0x17, 0x7f, 0x8f, 0xFF},
 		)),
 		widget.ButtonOpts.Text("게임 시작", facePtr(fontLarge), &widget.ButtonTextColor{
 			Idle: uiColorWhite,
 		}),
-		widget.ButtonOpts.TextPadding(&widget.Insets{Left: 40, Right: 40, Top: 12, Bottom: 12}),
+		widget.ButtonOpts.TextPadding(&widget.Insets{Left: 54, Right: 54, Top: 12, Bottom: 12}),
 		widget.ButtonOpts.WidgetOpts(widget.WidgetOpts.LayoutData(widget.RowLayoutData{
 			Position: widget.RowLayoutPositionCenter,
 		})),
@@ -158,22 +160,19 @@ func (ui *UIManager) buildTitleUI() {
 	)
 	centerPanel.AddChild(startBtn)
 
-	// Spacer
 	spacer2 := widget.NewContainer(
-		widget.ContainerOpts.WidgetOpts(widget.WidgetOpts.MinSize(0, 15)),
+		widget.ContainerOpts.WidgetOpts(widget.WidgetOpts.MinSize(0, 8)),
 	)
 	centerPanel.AddChild(spacer2)
 
-	// Instructions
 	instructions := []string{
-		"조작법:",
-		"• 카드를 클릭하여 선택, 그리드에 배치",
-		"• 유닛이 주변 적을 자동으로 공격합니다",
-		"• 10 웨이브를 버텨서 승리하세요!",
+		"카드를 선택해 전장에 배치하세요.",
+		"유닛은 사거리 내 적을 자동으로 공격합니다.",
+		"10웨이브를 막아내면 승리합니다.",
 	}
 	for _, line := range instructions {
 		l := widget.NewLabel(
-			widget.LabelOpts.Text(line, facePtr(fontMedium), labelColor(uiColorGrey)),
+			widget.LabelOpts.Text(line, facePtr(fontSmall), labelColor(uiColorGrey)),
 			widget.LabelOpts.TextOpts(widget.TextOpts.Position(widget.TextPositionCenter, widget.TextPositionCenter)),
 		)
 		centerPanel.AddChild(l)
@@ -197,11 +196,11 @@ func (ui *UIManager) buildBattleUI() {
 			VerticalPosition:   widget.AnchorLayoutPositionStart,
 			StretchHorizontal:  true,
 		})),
-		widget.ContainerOpts.BackgroundImage(nineSlice(uiColorDarkBG)),
+		widget.ContainerOpts.BackgroundImage(borderedNineSlice(uiColorDarkBG, uiColorBorder, 1)),
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
 			widget.RowLayoutOpts.Direction(widget.DirectionHorizontal),
 			widget.RowLayoutOpts.Spacing(20),
-			widget.RowLayoutOpts.Padding(&widget.Insets{Left: 15, Right: 15, Top: 6, Bottom: 6}),
+			widget.RowLayoutOpts.Padding(&widget.Insets{Left: 18, Right: 18, Top: 9, Bottom: 9}),
 		)),
 	)
 
@@ -233,12 +232,12 @@ func (ui *UIManager) buildBattleUI() {
 
 	ui.speedBtn1 = widget.NewButton(
 		widget.ButtonOpts.Image(buttonImage(
-			color.NRGBA{0x00, 0x87, 0x51, 0xFF},
-			color.NRGBA{0x00, 0xA0, 0x60, 0xFF},
-			color.NRGBA{0x00, 0x60, 0x38, 0xFF},
+			color.NRGBA{0x1a, 0x97, 0xa8, 0xFF},
+			color.NRGBA{0x25, 0xb9, 0xcd, 0xFF},
+			color.NRGBA{0x17, 0x7f, 0x8f, 0xFF},
 		)),
 		widget.ButtonOpts.Text("1x", facePtr(fontSmall), &widget.ButtonTextColor{Idle: uiColorWhite}),
-		widget.ButtonOpts.TextPadding(&widget.Insets{Left: 8, Right: 8, Top: 2, Bottom: 2}),
+		widget.ButtonOpts.TextPadding(&widget.Insets{Left: 12, Right: 12, Top: 3, Bottom: 3}),
 		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
 			ui.onSpeedChange(1)
 		}),
@@ -247,12 +246,12 @@ func (ui *UIManager) buildBattleUI() {
 
 	ui.speedBtn2 = widget.NewButton(
 		widget.ButtonOpts.Image(buttonImage(
-			color.NRGBA{0x30, 0x30, 0x45, 0xFF},
-			color.NRGBA{0x00, 0xA0, 0x60, 0xFF},
-			color.NRGBA{0x00, 0x60, 0x38, 0xFF},
+			color.NRGBA{0x1f, 0x2e, 0x42, 0xFF},
+			color.NRGBA{0x25, 0xb9, 0xcd, 0xFF},
+			color.NRGBA{0x17, 0x7f, 0x8f, 0xFF},
 		)),
 		widget.ButtonOpts.Text("2x", facePtr(fontSmall), &widget.ButtonTextColor{Idle: uiColorWhite}),
-		widget.ButtonOpts.TextPadding(&widget.Insets{Left: 8, Right: 8, Top: 2, Bottom: 2}),
+		widget.ButtonOpts.TextPadding(&widget.Insets{Left: 12, Right: 12, Top: 3, Bottom: 3}),
 		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
 			ui.onSpeedChange(2)
 		}),
@@ -266,13 +265,13 @@ func (ui *UIManager) buildBattleUI() {
 		widget.ContainerOpts.WidgetOpts(widget.WidgetOpts.LayoutData(widget.AnchorLayoutData{
 			HorizontalPosition: widget.AnchorLayoutPositionStart,
 			VerticalPosition:   widget.AnchorLayoutPositionCenter,
-			Padding:            &widget.Insets{Top: 40},
+			Padding:            &widget.Insets{Top: 40, Left: 6},
 		})),
-		widget.ContainerOpts.BackgroundImage(nineSlice(uiColorDarkBG)),
+		widget.ContainerOpts.BackgroundImage(borderedNineSlice(uiColorDarkBG, uiColorBorder, 1)),
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
 			widget.RowLayoutOpts.Direction(widget.DirectionVertical),
 			widget.RowLayoutOpts.Spacing(6),
-			widget.RowLayoutOpts.Padding(&widget.Insets{Left: 8, Right: 8, Top: 10, Bottom: 10}),
+			widget.RowLayoutOpts.Padding(&widget.Insets{Left: 11, Right: 11, Top: 12, Bottom: 12}),
 		)),
 	)
 
@@ -313,13 +312,13 @@ func (ui *UIManager) buildBattleUI() {
 		widget.ContainerOpts.WidgetOpts(widget.WidgetOpts.LayoutData(widget.AnchorLayoutData{
 			HorizontalPosition: widget.AnchorLayoutPositionEnd,
 			VerticalPosition:   widget.AnchorLayoutPositionCenter,
-			Padding:            &widget.Insets{Top: 40},
+			Padding:            &widget.Insets{Top: 40, Right: 6},
 		})),
-		widget.ContainerOpts.BackgroundImage(nineSlice(uiColorDarkBG)),
+		widget.ContainerOpts.BackgroundImage(borderedNineSlice(uiColorDarkBG, uiColorBorder, 1)),
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
 			widget.RowLayoutOpts.Direction(widget.DirectionVertical),
 			widget.RowLayoutOpts.Spacing(6),
-			widget.RowLayoutOpts.Padding(&widget.Insets{Left: 8, Right: 8, Top: 10, Bottom: 10}),
+			widget.RowLayoutOpts.Padding(&widget.Insets{Left: 11, Right: 11, Top: 12, Bottom: 12}),
 		)),
 	)
 
@@ -357,7 +356,7 @@ func (ui *UIManager) buildBattleUI() {
 
 func (ui *UIManager) buildEndUI() {
 	root := widget.NewContainer(
-		widget.ContainerOpts.BackgroundImage(nineSlice(color.NRGBA{0x08, 0x08, 0x12, 0xF0})),
+		widget.ContainerOpts.BackgroundImage(nineSlice(color.NRGBA{0x04, 0x0b, 0x14, 0xE6})),
 		widget.ContainerOpts.Layout(widget.NewAnchorLayout()),
 	)
 
@@ -366,10 +365,11 @@ func (ui *UIManager) buildEndUI() {
 			HorizontalPosition: widget.AnchorLayoutPositionCenter,
 			VerticalPosition:   widget.AnchorLayoutPositionCenter,
 		})),
+		widget.ContainerOpts.BackgroundImage(borderedNineSlice(uiColorDarkBG, uiColorBorder, 1)),
 		widget.ContainerOpts.Layout(widget.NewRowLayout(
 			widget.RowLayoutOpts.Direction(widget.DirectionVertical),
-			widget.RowLayoutOpts.Spacing(15),
-			widget.RowLayoutOpts.Padding(widget.NewInsetsSimple(30)),
+			widget.RowLayoutOpts.Spacing(12),
+			widget.RowLayoutOpts.Padding(widget.NewInsetsSimple(24)),
 		)),
 	)
 
@@ -392,9 +392,9 @@ func (ui *UIManager) buildEndUI() {
 
 	restartBtn := widget.NewButton(
 		widget.ButtonOpts.Image(buttonImage(
-			color.NRGBA{0x50, 0x30, 0x10, 0xFF},
-			color.NRGBA{0x70, 0x50, 0x20, 0xFF},
-			color.NRGBA{0x40, 0x20, 0x08, 0xFF},
+			color.NRGBA{0x1f, 0x2e, 0x42, 0xFF},
+			color.NRGBA{0x2f, 0x4c, 0x6d, 0xFF},
+			color.NRGBA{0x17, 0x24, 0x34, 0xFF},
 		)),
 		widget.ButtonOpts.Text("타이틀로 돌아가기", facePtr(fontMedium), &widget.ButtonTextColor{
 			Idle: uiColorWhite,

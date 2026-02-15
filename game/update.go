@@ -1,6 +1,7 @@
 package game
 
 import (
+	"image/color"
 	"math"
 	"math/rand"
 
@@ -299,16 +300,16 @@ func (g *Game) updateBattle() {
 		}
 		if e.HP <= 0 {
 			e.Dead = true
-			var deathColor = pixelPalette['8'] // red default
+			deathColor := color.RGBA{0xFF, 0x67, 0x7C, 0xFF}
 			switch e.Type {
 			case entity.EnemyGoblin:
-				deathColor = pixelPalette['b'] // green
+				deathColor = color.RGBA{0x40, 0xD8, 0xA8, 0xFF}
 			case entity.EnemyOrc:
-				deathColor = pixelPalette['4'] // brown
+				deathColor = color.RGBA{0xCE, 0x92, 0x5E, 0xFF}
 			case entity.EnemyBossOrc:
-				deathColor = pixelPalette['9'] // orange
+				deathColor = color.RGBA{0xFF, 0xA2, 0x66, 0xFF}
 			case entity.EnemyFinalBoss:
-				deathColor = pixelPalette['2'] // purple
+				deathColor = color.RGBA{0xB9, 0x8C, 0xE8, 0xFF}
 			}
 			g.spawnDeathParticles(e.X, e.Y, deathColor)
 		}

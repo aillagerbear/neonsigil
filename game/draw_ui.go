@@ -16,15 +16,15 @@ import (
 // ---- Card UI Colors ----
 
 var (
-	uiColorCardBorder   = color.NRGBA{0x4a, 0x4a, 0x6a, 0xFF}
-	uiColorHumanGold    = color.NRGBA{0xFF, 0xCC, 0x44, 0xFF}
-	uiColorElfEmerald   = color.NRGBA{0x44, 0xCC, 0x66, 0xFF}
-	uiColorCostBadge    = color.NRGBA{0x29, 0x6B, 0xCC, 0xFF}
-	uiColorCostBadgeRed = color.NRGBA{0xCC, 0x33, 0x33, 0xFF}
-	uiColorGlowBlue     = color.NRGBA{0x29, 0xAD, 0xFF, 0x40}
-	uiColorGlowGreen    = color.NRGBA{0x00, 0xE4, 0x36, 0x50}
-	uiColorGlowGold     = color.NRGBA{0xFF, 0xCC, 0x44, 0x40}
-	uiColorNameBanner   = color.NRGBA{0x10, 0x10, 0x20, 0xCC}
+	uiColorCardBorder   = color.NRGBA{0x40, 0x59, 0x79, 0xFF}
+	uiColorHumanGold    = color.NRGBA{0xFF, 0xD1, 0x73, 0xFF}
+	uiColorElfEmerald   = color.NRGBA{0x49, 0xDF, 0xB2, 0xFF}
+	uiColorCostBadge    = color.NRGBA{0x2F, 0xB8, 0xCC, 0xFF}
+	uiColorCostBadgeRed = color.NRGBA{0xE7, 0x5A, 0x72, 0xFF}
+	uiColorGlowBlue     = color.NRGBA{0x46, 0xD8, 0xE3, 0x50}
+	uiColorGlowGreen    = color.NRGBA{0x37, 0xD5, 0xA5, 0x55}
+	uiColorGlowGold     = color.NRGBA{0xFF, 0xD8, 0x80, 0x50}
+	uiColorNameBanner   = color.NRGBA{0x0B, 0x14, 0x20, 0xD6}
 	uiColorDisabledOvr  = color.NRGBA{0x00, 0x00, 0x00, 0x80}
 )
 
@@ -36,6 +36,13 @@ func drawGlowRect(screen *ebiten.Image, x, y, w, h float32, glowColor color.NRGB
 		c := color.NRGBA{glowColor.R, glowColor.G, glowColor.B, alpha}
 		vector.StrokeRect(screen, x-i, y-i, w+i*2, h+i*2, 1, c, false)
 	}
+}
+
+func drawGlassPanel(screen *ebiten.Image, x, y, w, h float32, topColor, bottomColor, border color.NRGBA) {
+	vector.FillRect(screen, x, y, w, h, bottomColor, false)
+	vector.FillRect(screen, x, y, w, h*0.45, topColor, false)
+	vector.StrokeRect(screen, x, y, w, h, 1, border, false)
+	vector.FillRect(screen, x+1, y+1, w-2, 1, color.NRGBA{0xE4, 0xF6, 0xFF, 0x38}, false)
 }
 
 // ---- Helper: get race border color ----
@@ -78,16 +85,17 @@ func drawCostBadge(screen *ebiten.Image, cost int, x, y float64, affordable bool
 		badgeColor = uiColorCostBadgeRed
 	}
 
-	// Circle background
-	vector.FillCircle(screen, float32(x), float32(y), 13, color.NRGBA{0x08, 0x08, 0x15, 0xFF}, false)
-	vector.FillCircle(screen, float32(x), float32(y), 11, badgeColor, false)
+	// Badge base
+	vector.FillCircle(screen, float32(x), float32(y), 13, color.NRGBA{0x07, 0x10, 0x1a, 0xFF}, false)
+	vector.FillCircle(screen, float32(x), float32(y), 11.5, badgeColor, false)
+	vector.FillCircle(screen, float32(x), float32(y)-2, 7, color.NRGBA{0xFF, 0xFF, 0xFF, 0x1F}, false)
 
 	// Cost number
 	costStr := fmt.Sprintf("%d", cost)
 	op := &text.DrawOptions{}
 	tw, th := text.Measure(costStr, fontCardCost, 0)
 	op.GeoM.Translate(x-tw/2, y-th/2)
-	op.ColorScale.ScaleWithColor(color.RGBA{0xFF, 0xFF, 0xFF, 0xFF})
+	op.ColorScale.ScaleWithColor(color.RGBA{0xF5, 0xFA, 0xFF, 0xFF})
 	text.Draw(screen, costStr, fontCardCost, op)
 }
 
@@ -115,7 +123,7 @@ func (g *Game) drawSingleCard(screen *ebiten.Image, card entity.CardData, x, y f
 		drawGlowRect(screen, fx, fy, fw, fh, uiColorGlowBlue, 4)
 	}
 
-	// Card background (gradient image)
+	// Card background
 	var bgImg *ebiten.Image
 	if isHover && canAfford {
 		bgImg = g.sprites.CardBGHover
@@ -130,11 +138,21 @@ func (g *Game) drawSingleCard(screen *ebiten.Image, card entity.CardData, x, y f
 	op.GeoM.Scale(scaleX, scaleY)
 	op.GeoM.Translate(x, float64(fy))
 	screen.DrawImage(bgImg, op)
+	drawGlassPanel(
+		screen,
+		fx,
+		fy,
+		fw,
+		fh,
+		color.NRGBA{0xC8, 0xE7, 0xFF, 0x1A},
+		color.NRGBA{0x0B, 0x14, 0x20, 0xA8},
+		color.NRGBA{0x2F, 0x48, 0x67, 0xD4},
+	)
 
 	// Border
 	borderColor := raceBorderColor(card.Race)
 	if isSelected {
-		borderColor = color.NRGBA{0x00, 0xE4, 0x36, 0xFF}
+		borderColor = color.NRGBA{0x37, 0xD5, 0xA5, 0xFF}
 	} else if isHover && canAfford {
 		borderColor = uiColorAccent
 	}
@@ -169,7 +187,7 @@ func (g *Game) drawSingleCard(screen *ebiten.Image, card entity.CardData, x, y f
 	nameOp := &text.DrawOptions{}
 	nw, _ := text.Measure(card.Name, fontCardName, 0)
 	nameOp.GeoM.Translate(innerX+(innerW-nw)/2, curY+3)
-	nameOp.ColorScale.ScaleWithColor(color.RGBA{0xFF, 0xF1, 0xE8, 0xFF})
+	nameOp.ColorScale.ScaleWithColor(color.RGBA{0xF3, 0xF8, 0xFF, 0xFF})
 	text.Draw(screen, card.Name, fontCardName, nameOp)
 	curY += 26
 
@@ -177,11 +195,11 @@ func (g *Game) drawSingleCard(screen *ebiten.Image, card entity.CardData, x, y f
 	if card.Type != entity.CardFireball {
 		// HP with heart icon
 		g.drawIconStat(screen, g.sprites.HeartIcon, fmt.Sprintf("%d", card.HP),
-			innerX+4, curY, color.RGBA{0xFF, 0x60, 0x60, 0xFF})
+			innerX+4, curY, color.RGBA{0xFF, 0x7A, 0x8D, 0xFF})
 
 		// ATK with sword icon
 		g.drawIconStat(screen, g.sprites.SwordIcon, fmt.Sprintf("%d", card.Atk),
-			innerX+float64(fw)/2-4, curY, color.RGBA{0xFF, 0xCC, 0x44, 0xFF})
+			innerX+float64(fw)/2-4, curY, color.RGBA{0xFF, 0xD3, 0x70, 0xFF})
 		curY += 18
 
 		// Range
@@ -190,15 +208,15 @@ func (g *Game) drawSingleCard(screen *ebiten.Image, card entity.CardData, x, y f
 			rangeText = fmt.Sprintf("사거리 %d", card.Range)
 		}
 		g.drawIconStat(screen, g.sprites.RangeIcon, rangeText,
-			innerX+4, curY, color.RGBA{0xAA, 0xCC, 0xFF, 0xFF})
+			innerX+4, curY, color.RGBA{0x9D, 0xD6, 0xFF, 0xFF})
 		curY += 18
 	} else {
 		// Fireball stats
 		drawKoreanText(screen, "피해 20 광역", fontCardInfo, innerX+4, curY+2,
-			color.RGBA{0xFF, 0x99, 0x33, 0xFF})
+			color.RGBA{0xFF, 0xA7, 0x5D, 0xFF})
 		curY += 18
 		drawKoreanText(screen, "타겟 클릭", fontCardInfo, innerX+4, curY+2,
-			color.RGBA{0xCC, 0xCC, 0xCC, 0xFF})
+			color.RGBA{0xB7, 0xC5, 0xD8, 0xFF})
 		curY += 18
 	}
 
@@ -260,8 +278,16 @@ func (g *Game) drawHandCards(screen *ebiten.Image) {
 	panelY := float32(startY) - 8
 	panelW := float32(totalW) + 24
 	panelH := float32(cardH) + 20
-	vector.FillRect(screen, panelX, panelY, panelW, panelH, color.NRGBA{0x12, 0x12, 0x20, 0xE0}, false)
-	vector.StrokeRect(screen, panelX, panelY, panelW, panelH, 1, color.NRGBA{0x3a, 0x3a, 0x5a, 0x80}, false)
+	drawGlassPanel(
+		screen,
+		panelX,
+		panelY,
+		panelW,
+		panelH,
+		color.NRGBA{0xBC, 0xE0, 0xFF, 0x16},
+		color.NRGBA{0x0A, 0x12, 0x1E, 0xD4},
+		color.NRGBA{0x30, 0x49, 0x67, 0x80},
+	)
 
 	// Reset card rects
 	g.cardRects = g.cardRects[:0]
@@ -287,7 +313,8 @@ func (g *Game) drawHandCards(screen *ebiten.Image) {
 
 func drawEnhancedBar(screen *ebiten.Image, x, y, w, h float32, ratio float64, fillColor color.RGBA, label string) {
 	// Background
-	vector.FillRect(screen, x, y, w, h, color.RGBA{0x1a, 0x1a, 0x1a, 0xFF}, false)
+	vector.FillRect(screen, x, y, w, h, color.RGBA{0x0E, 0x15, 0x21, 0xFF}, false)
+	vector.FillRect(screen, x, y, w, h*0.45, color.RGBA{0x4D, 0x6A, 0x8A, 0x28}, false)
 
 	// Fill
 	fillW := float32(ratio) * w
@@ -301,11 +328,13 @@ func drawEnhancedBar(screen *ebiten.Image, x, y, w, h float32, ratio float64, fi
 
 		// Highlight edge
 		hlColor := lerpColor(fillColor, color.RGBA{0xFF, 0xFF, 0xFF, 0xFF}, 0.45)
-		vector.FillRect(screen, x+1, y+1, fillW-2, 1, hlColor, false)
+		if fillW > 2 {
+			vector.FillRect(screen, x+1, y+1, fillW-2, 1, hlColor, false)
+		}
 	}
 
 	// Border
-	vector.StrokeRect(screen, x, y, w, h, 1, color.RGBA{0x00, 0x00, 0x00, 0xCC}, false)
+	vector.StrokeRect(screen, x, y, w, h, 1, color.RGBA{0x32, 0x4c, 0x6c, 0xD4}, false)
 
 	// Text label centered on bar
 	if label != "" {
@@ -313,9 +342,9 @@ func drawEnhancedBar(screen *ebiten.Image, x, y, w, h float32, ratio float64, fi
 		lx := float64(x) + float64(w)/2 - lw/2
 		ly := float64(y) + float64(h)/2 - lh/2
 		// Shadow
-		drawKoreanText(screen, label, fontBarValue, lx+1, ly+1, color.RGBA{0x00, 0x00, 0x00, 0xCC})
+		drawKoreanText(screen, label, fontBarValue, lx+1, ly+1, color.RGBA{0x05, 0x0A, 0x10, 0xCC})
 		// Text
-		drawKoreanText(screen, label, fontBarValue, lx, ly, color.RGBA{0xFF, 0xFF, 0xFF, 0xFF})
+		drawKoreanText(screen, label, fontBarValue, lx, ly, color.RGBA{0xF3, 0xF8, 0xFF, 0xFF})
 	}
 }
 
@@ -334,16 +363,16 @@ func drawWaveProgress(screen *ebiten.Image, currentWave, maxWave, animTick int) 
 
 		if i < currentWave {
 			// Completed - filled bright
-			vector.FillCircle(screen, px, py, pipSize/2, color.NRGBA{0x29, 0xAD, 0xFF, 0xFF}, false)
-			vector.StrokeCircle(screen, px, py, pipSize/2, 1, color.NRGBA{0x60, 0xCF, 0xFF, 0xFF}, false)
+			vector.FillCircle(screen, px, py, pipSize/2, color.NRGBA{0x36, 0xD1, 0xDC, 0xFF}, false)
+			vector.StrokeCircle(screen, px, py, pipSize/2, 1, color.NRGBA{0x8D, 0xEC, 0xF2, 0xFF}, false)
 		} else if i == currentWave {
 			// Current - pulsing
 			pulse := byte(160 + int(95*math.Sin(float64(animTick)*0.08)))
-			vector.FillCircle(screen, px, py, pipSize/2, color.NRGBA{0x29, 0xAD, 0xFF, pulse}, false)
-			vector.StrokeCircle(screen, px, py, pipSize/2+1, 1, color.NRGBA{0x29, 0xAD, 0xFF, pulse / 2}, false)
+			vector.FillCircle(screen, px, py, pipSize/2, color.NRGBA{0x36, 0xD1, 0xDC, pulse}, false)
+			vector.StrokeCircle(screen, px, py, pipSize/2+1, 1, color.NRGBA{0x36, 0xD1, 0xDC, pulse / 2}, false)
 		} else {
 			// Future - dim outline
-			vector.StrokeCircle(screen, px, py, pipSize/2, 1, color.NRGBA{0x3a, 0x3a, 0x5a, 0xFF}, false)
+			vector.StrokeCircle(screen, px, py, pipSize/2, 1, color.NRGBA{0x45, 0x5F, 0x7D, 0xFF}, false)
 		}
 	}
 }
@@ -353,18 +382,18 @@ func drawWaveProgress(screen *ebiten.Image, currentWave, maxWave, animTick int) 
 func (g *Game) drawCustomHUD(screen *ebiten.Image) {
 	// HP bar
 	hpRatio := float64(g.summonerHP) / float64(config.SummonerMaxHP)
-	hpColor := color.RGBA{0x00, 0xCC, 0x44, 0xFF} // green
+	hpColor := color.RGBA{0x29, 0xD4, 0xA1, 0xFF}
 	if hpRatio < 0.3 {
-		hpColor = color.RGBA{0xFF, 0x33, 0x44, 0xFF} // red
+		hpColor = color.RGBA{0xFF, 0x5D, 0x73, 0xFF}
 	} else if hpRatio < 0.6 {
-		hpColor = color.RGBA{0xFF, 0xCC, 0x33, 0xFF} // yellow
+		hpColor = color.RGBA{0xFF, 0xCF, 0x63, 0xFF}
 	}
 	hpLabel := fmt.Sprintf("%d / %d", g.summonerHP, config.SummonerMaxHP)
 	drawEnhancedBar(screen, 8, 56, float32(config.BarWidth), float32(config.BarHeight), hpRatio, hpColor, hpLabel)
 
 	// Mana bar
 	manaRatio := g.mana / float64(g.maxMana)
-	manaColor := color.RGBA{0x29, 0x99, 0xFF, 0xFF}
+	manaColor := color.RGBA{0x3C, 0xB8, 0xF2, 0xFF}
 	manaLabel := fmt.Sprintf("%.0f / %d", g.mana, g.maxMana)
 	drawEnhancedBar(screen, 8, 100, float32(config.BarWidth), float32(config.BarHeight), manaRatio, manaColor, manaLabel)
 
@@ -372,7 +401,7 @@ func (g *Game) drawCustomHUD(screen *ebiten.Image) {
 	if g.mana < float64(g.maxMana) {
 		regenProgress := float64(g.manaTimer) / float64(config.ManaRegenTicks)
 		regenW := float32(float64(config.BarWidth) * regenProgress)
-		vector.FillRect(screen, 8, float32(100+config.BarHeight+1), regenW, 3, color.RGBA{0x29, 0xAD, 0xFF, 0x60}, false)
+		vector.FillRect(screen, 8, float32(100+config.BarHeight+1), regenW, 3, color.RGBA{0x36, 0xD1, 0xDC, 0x66}, false)
 	}
 
 	// Wave progress pips
@@ -383,7 +412,7 @@ func (g *Game) drawCustomHUD(screen *ebiten.Image) {
 
 func (g *Game) drawRewardScreen(screen *ebiten.Image) {
 	// Dark overlay
-	vector.FillRect(screen, 0, 0, config.ScreenWidth, config.ScreenHeight, color.NRGBA{0x00, 0x00, 0x00, 0xCC}, false)
+	vector.FillRect(screen, 0, 0, config.ScreenWidth, config.ScreenHeight, color.NRGBA{0x03, 0x08, 0x12, 0xD9}, false)
 
 	// Title with glow
 	titleText := fmt.Sprintf("웨이브 %d 클리어!", g.wave+1)
@@ -392,18 +421,18 @@ func (g *Game) drawRewardScreen(screen *ebiten.Image) {
 	titleY := float64(80)
 
 	// Glow effect (multi-pass at low alpha)
-	glowColor := color.RGBA{0xFF, 0xCC, 0x44, 0x30}
+	glowColor := color.RGBA{0x36, 0xD1, 0xDC, 0x34}
 	for _, off := range [][2]float64{{-2, 0}, {2, 0}, {0, -2}, {0, 2}, {-1, -1}, {1, 1}, {-1, 1}, {1, -1}} {
 		drawKoreanText(screen, titleText, fontTitle, titleX+off[0], titleY+off[1], glowColor)
 	}
-	drawKoreanText(screen, titleText, fontTitle, titleX, titleY, color.RGBA{0xFF, 0xDD, 0x55, 0xFF})
+	drawKoreanText(screen, titleText, fontTitle, titleX, titleY, color.RGBA{0xBC, 0xF4, 0xFF, 0xFF})
 
 	// Subtitle
 	subText := "카드를 선택하세요"
 	sw, _ := text.Measure(subText, fontLarge, 0)
 	drawKoreanTextWithShadow(screen, subText, fontLarge,
 		float64(config.ScreenWidth)/2-sw/2, titleY+40,
-		color.RGBA{0xCC, 0xCC, 0xCC, 0xFF})
+		color.RGBA{0xB2, 0xC3, 0xD8, 0xFF})
 
 	// Reward cards
 	cardW := float64(config.RewardCardWidth)
@@ -453,6 +482,16 @@ func (g *Game) drawRewardCard(screen *ebiten.Image, card entity.CardData, x, y, 
 	bgOp.GeoM.Scale(scaleX, scaleY)
 	bgOp.GeoM.Translate(x, float64(fy))
 	screen.DrawImage(g.sprites.RewardCardBG, bgOp)
+	drawGlassPanel(
+		screen,
+		fx,
+		fy,
+		fw,
+		fh,
+		color.NRGBA{0xCB, 0xEB, 0xFF, 0x1E},
+		color.NRGBA{0x0A, 0x13, 0x1E, 0xAA},
+		color.NRGBA{0x35, 0x4E, 0x6E, 0xD8},
+	)
 
 	// Border
 	borderColor := raceBorderColor(card.Race)
@@ -485,17 +524,17 @@ func (g *Game) drawRewardCard(screen *ebiten.Image, card entity.CardData, x, y, 
 	nw, _ := text.Measure(card.Name, fontLarge, 0)
 	nameOp := &text.DrawOptions{}
 	nameOp.GeoM.Translate(innerX+(innerW-nw)/2, curY+3)
-	nameOp.ColorScale.ScaleWithColor(color.RGBA{0xFF, 0xF1, 0xE8, 0xFF})
+	nameOp.ColorScale.ScaleWithColor(color.RGBA{0xF3, 0xF8, 0xFF, 0xFF})
 	text.Draw(screen, card.Name, fontLarge, nameOp)
 	curY += 30
 
 	// Stats
 	if card.Type != entity.CardFireball {
 		g.drawIconStat(screen, g.sprites.HeartIcon, fmt.Sprintf("체력: %d", card.HP),
-			innerX+4, curY, color.RGBA{0xFF, 0x60, 0x60, 0xFF})
+			innerX+4, curY, color.RGBA{0xFF, 0x7A, 0x8D, 0xFF})
 		curY += 20
 		g.drawIconStat(screen, g.sprites.SwordIcon, fmt.Sprintf("공격: %d", card.Atk),
-			innerX+4, curY, color.RGBA{0xFF, 0xCC, 0x44, 0xFF})
+			innerX+4, curY, color.RGBA{0xFF, 0xD3, 0x70, 0xFF})
 		curY += 20
 
 		speedText := "보통"
@@ -505,7 +544,7 @@ func (g *Game) drawRewardCard(screen *ebiten.Image, card entity.CardData, x, y, 
 			speedText = "느림"
 		}
 		drawKoreanText(screen, fmt.Sprintf("속도: %s", speedText), fontCardInfo,
-			innerX+4, curY+2, color.RGBA{0xCC, 0xCC, 0xCC, 0xFF})
+			innerX+4, curY+2, color.RGBA{0xB7, 0xC5, 0xD8, 0xFF})
 		curY += 20
 
 		rangeText := "근접"
@@ -513,20 +552,20 @@ func (g *Game) drawRewardCard(screen *ebiten.Image, card entity.CardData, x, y, 
 			rangeText = fmt.Sprintf("%d칸", card.Range)
 		}
 		g.drawIconStat(screen, g.sprites.RangeIcon, fmt.Sprintf("사거리: %s", rangeText),
-			innerX+4, curY, color.RGBA{0xAA, 0xCC, 0xFF, 0xFF})
+			innerX+4, curY, color.RGBA{0x9D, 0xD6, 0xFF, 0xFF})
 		curY += 24
 	} else {
 		drawKoreanText(screen, "마법 카드", fontCardInfo, innerX+4, curY+2,
-			color.RGBA{0xFF, 0x99, 0x33, 0xFF})
+			color.RGBA{0xFF, 0xA7, 0x5D, 0xFF})
 		curY += 20
 		drawKoreanText(screen, "피해: 20 (광역)", fontCardInfo, innerX+4, curY+2,
-			color.RGBA{0xFF, 0xCC, 0x44, 0xFF})
+			color.RGBA{0xFF, 0xD3, 0x70, 0xFF})
 		curY += 20
 		drawKoreanText(screen, "주변 적 모두에게", fontCardInfo, innerX+4, curY+2,
-			color.RGBA{0xCC, 0xCC, 0xCC, 0xFF})
+			color.RGBA{0xB7, 0xC5, 0xD8, 0xFF})
 		curY += 20
 		drawKoreanText(screen, "피해를 줍니다", fontCardInfo, innerX+4, curY+2,
-			color.RGBA{0xCC, 0xCC, 0xCC, 0xFF})
+			color.RGBA{0xB7, 0xC5, 0xD8, 0xFF})
 		curY += 24
 	}
 
@@ -569,9 +608,9 @@ func (g *Game) drawRewardCard(screen *ebiten.Image, card entity.CardData, x, y, 
 	// "클릭하여 추가" prompt at bottom
 	promptText := "클릭하여 추가"
 	pw, _ := text.Measure(promptText, fontSmall, 0)
-	promptColor := color.RGBA{0x88, 0x88, 0x99, 0xFF}
+	promptColor := color.RGBA{0x93, 0xA7, 0xBF, 0xFF}
 	if isHover {
-		promptColor = color.RGBA{0xFF, 0xDD, 0x55, 0xFF}
+		promptColor = color.RGBA{0xBC, 0xF4, 0xFF, 0xFF}
 	}
 	drawKoreanText(screen, promptText, fontSmall,
 		float64(fx)+float64(fw)/2-pw/2, float64(fy)+h-float64(offsetY)-6, promptColor)
@@ -579,37 +618,67 @@ func (g *Game) drawRewardCard(screen *ebiten.Image, card entity.CardData, x, y, 
 
 // ---- Title Screen Decorations ----
 
+func drawTitleWord(screen *ebiten.Image, word string, x, y float64, base color.RGBA) {
+	shadow := color.RGBA{0x03, 0x08, 0x12, 0xB0}
+	drawKoreanText(screen, word, fontTitle, x+3, y+3, shadow)
+	drawKoreanText(screen, word, fontTitle, x+1, y+1, color.RGBA{0x8A, 0xB8, 0xD8, 0x8A})
+	drawKoreanText(screen, word, fontTitle, x, y, base)
+}
+
 func (g *Game) drawTitleDecorations(screen *ebiten.Image) {
-	// Animated floating sprites in background
 	t := float64(g.animTick)
 
-	// Soldier drifting
-	sx := 150 + 30*math.Sin(t*0.01)
-	sy := 300 + 20*math.Cos(t*0.015)
-	drawSpriteAtWithColor(screen, g.sprites.Soldier, sx, sy, 4.0, 0.3, 0.3, 0.5, 0.3)
+	// Ambient glows
+	vector.FillCircle(screen, 210, 150, 160, color.RGBA{0x0E, 0x5B, 0x8A, 0x3E}, false)
+	vector.FillCircle(screen, 820, 180, 190, color.RGBA{0x18, 0x82, 0x8E, 0x34}, false)
+	vector.FillCircle(screen, 530, 90, 220, color.RGBA{0x1E, 0x3D, 0x62, 0x46}, false)
 
-	// Archer drifting
-	ax := 870 + 25*math.Cos(t*0.012)
-	ay := 350 + 15*math.Sin(t*0.018)
-	drawSpriteAtWithColor(screen, g.sprites.Archer, ax, ay, 4.0, 0.3, 0.5, 0.3, 0.3)
+	// Animated floating sprites in background
+	sx := 170 + 26*math.Sin(t*0.01)
+	sy := 322 + 18*math.Cos(t*0.015)
+	drawSpriteAtWithColor(screen, g.sprites.Soldier, sx, sy, 4.2, 0.42, 0.70, 0.95, 0.45)
 
-	// Goblin drifting
-	gx := 200 + 20*math.Sin(t*0.008+1.5)
-	gy := 500 + 15*math.Cos(t*0.013)
-	drawSpriteAtWithColor(screen, g.sprites.Goblin, gx, gy, 3.0, 0.5, 0.3, 0.3, 0.25)
+	ax := 856 + 23*math.Cos(t*0.012)
+	ay := 350 + 14*math.Sin(t*0.018)
+	drawSpriteAtWithColor(screen, g.sprites.Archer, ax, ay, 4.1, 0.45, 0.78, 0.58, 0.40)
 
-	// Mage drifting
-	mx := 820 + 25*math.Cos(t*0.011+2.0)
-	my := 200 + 20*math.Sin(t*0.016)
-	drawSpriteAtWithColor(screen, g.sprites.Mage, mx, my, 4.0, 0.4, 0.3, 0.5, 0.25)
+	gx := 218 + 18*math.Sin(t*0.008+1.5)
+	gy := 514 + 14*math.Cos(t*0.013)
+	drawSpriteAtWithColor(screen, g.sprites.Goblin, gx, gy, 3.2, 0.85, 0.56, 0.56, 0.24)
 
-	// Decorative line separator
-	lineY := float32(config.ScreenHeight/2 + 40)
-	lineW := float32(300)
+	mx := 808 + 24*math.Cos(t*0.011+2.0)
+	my := 210 + 16*math.Sin(t*0.016)
+	drawSpriteAtWithColor(screen, g.sprites.Mage, mx, my, 4.2, 0.66, 0.58, 0.92, 0.35)
+
+	// Title logo
+	titleTop := "SUMMONER'S"
+	titleBottom := "DEFENSE"
+	topW, _ := text.Measure(titleTop, fontTitle, 0)
+	bottomW, _ := text.Measure(titleBottom, fontTitle, 0)
+	topX := float64(config.ScreenWidth)/2 - topW/2
+	bottomX := float64(config.ScreenWidth)/2 - bottomW/2
+	drawTitleWord(screen, titleTop, topX, 86, color.RGBA{0xCA, 0xF2, 0xFF, 0xFF})
+	drawTitleWord(screen, titleBottom, bottomX, 126, color.RGBA{0x8F, 0xEC, 0xF2, 0xFF})
+
+	krTitle := "소환사의 수호"
+	krW, _ := text.Measure(krTitle, fontLarge, 0)
+	drawKoreanTextWithShadow(
+		screen,
+		krTitle,
+		fontLarge,
+		float64(config.ScreenWidth)/2-krW/2,
+		172,
+		color.RGBA{0xD7, 0xE6, 0xF6, 0xFF},
+	)
+
+	// Decorative split line
+	lineY := float32(205)
+	lineW := float32(360)
 	lineX := float32(config.ScreenWidth)/2 - lineW/2
 	for i := float32(0); i < lineW; i++ {
-		alpha := byte(80 * (1 - math.Abs(float64(i-lineW/2))/float64(lineW/2)))
-		vector.FillRect(screen, lineX+i, lineY, 1, 1, color.RGBA{0x29, 0xAD, 0xFF, alpha}, false)
+		falloff := 1 - math.Abs(float64(i-lineW/2))/float64(lineW/2)
+		alpha := byte(95 * math.Max(falloff, 0))
+		vector.FillRect(screen, lineX+i, lineY, 1, 2, color.RGBA{0x3B, 0xD0, 0xDF, alpha}, false)
 	}
 }
 
@@ -619,7 +688,7 @@ func (g *Game) drawEndScreenEffects(screen *ebiten.Image) {
 	t := float64(g.animTick)
 
 	if g.state == entity.StateVictory {
-		// Golden particle-like stars
+		// Cyan celebration particles
 		for i := 0; i < 20; i++ {
 			fi := float64(i)
 			px := float64(config.ScreenWidth)/2 + 200*math.Cos(fi*0.7+t*0.02)
@@ -627,7 +696,7 @@ func (g *Game) drawEndScreenEffects(screen *ebiten.Image) {
 			alpha := byte(100 + int(80*math.Sin(t*0.05+fi*1.2)))
 			sz := float32(2 + math.Sin(t*0.06+fi)*1.5)
 			vector.FillRect(screen, float32(px), float32(py), sz, sz,
-				color.RGBA{0xFF, 0xCC, 0x44, alpha}, false)
+				color.RGBA{0x77, 0xE6, 0xEE, alpha}, false)
 		}
 	} else {
 		// Dim red vignette for game over
@@ -636,9 +705,9 @@ func (g *Game) drawEndScreenEffects(screen *ebiten.Image) {
 		for y := 0; y < 60; y++ {
 			a := byte(float64(vignetteAlpha) * (1 - float64(y)/60.0))
 			vector.FillRect(screen, 0, float32(y), config.ScreenWidth, 1,
-				color.RGBA{0xFF, 0x00, 0x20, a}, false)
+				color.RGBA{0xF4, 0x4D, 0x66, a}, false)
 			vector.FillRect(screen, 0, float32(config.ScreenHeight-y), config.ScreenWidth, 1,
-				color.RGBA{0xFF, 0x00, 0x20, a}, false)
+				color.RGBA{0xF4, 0x4D, 0x66, a}, false)
 		}
 	}
 }
