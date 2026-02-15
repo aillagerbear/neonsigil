@@ -2,10 +2,13 @@ package game
 
 import (
 	"bytes"
-	"os"
+	_ "embed"
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
+
+//go:embed fonts/NotoSansKR.ttf
+var fontTTF []byte
 
 var (
 	fontSource *text.GoTextFaceSource
@@ -16,6 +19,9 @@ var (
 	fontLarge    text.Face
 	fontTitle    text.Face
 	fontCardInfo text.Face
+	fontCardName text.Face
+	fontCardCost text.Face
+	fontBarValue text.Face
 
 	// Also keep GoTextFace versions for direct text.Draw calls
 	goFontSmall  *text.GoTextFace
@@ -24,17 +30,7 @@ var (
 )
 
 func initFonts() {
-	// Try embedded font first, then system fonts as fallback
-	fontData, err := os.ReadFile("assets/fonts/NotoSansKR.ttf")
-	if err != nil {
-		// Fallback: try macOS system Korean font
-		fontData, err = os.ReadFile("/System/Library/Fonts/Supplemental/AppleGothic.ttf")
-		if err != nil {
-			panic("한국어 폰트를 찾을 수 없습니다. assets/fonts/NotoSansKR.ttf 파일이 필요합니다.")
-		}
-	}
-
-	fontSource, err = text.NewGoTextFaceSource(bytes.NewReader(fontData))
+	fontSource, err := text.NewGoTextFaceSource(bytes.NewReader(fontTTF))
 	if err != nil {
 		panic("폰트 로드 실패: " + err.Error())
 	}
@@ -45,6 +41,9 @@ func initFonts() {
 
 	fontSmall = goFontSmall
 	fontCardInfo = &text.GoTextFace{Source: fontSource, Size: 12}
+	fontCardName = &text.GoTextFace{Source: fontSource, Size: 13}
+	fontCardCost = &text.GoTextFace{Source: fontSource, Size: 16}
+	fontBarValue = &text.GoTextFace{Source: fontSource, Size: 10}
 	fontMedium = goFontMedium
 	fontLarge = goFontLarge
 	fontTitle = &text.GoTextFace{Source: fontSource, Size: 28}

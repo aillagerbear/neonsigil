@@ -7,6 +7,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+// CardRect represents the screen area of a drawn card for click detection
+type CardRect struct {
+	X, Y, W, H float64
+	Index       int
+}
+
 // Game implements the ebiten.Game interface and holds all game state.
 type Game struct {
 	state   entity.GameState
@@ -58,9 +64,14 @@ type Game struct {
 	bgStars   []Star
 	animTick  int
 
+	// Custom card UI
+	hoverCard       int        // -1 = none
+	cardRects       []CardRect // current frame card positions
+	rewardCardRects []CardRect // reward card positions
+	hoverReward     int        // -1 = none
+
 	// ebitenui
-	ui            *UIManager
-	rewardReady   bool
+	ui             *UIManager
 	endScreenReady bool
 }
 
@@ -75,6 +86,8 @@ func New() *Game {
 		gameSpeed:    1,
 		selectedCard: -1,
 		rewardHover:  -1,
+		hoverCard:    -1,
+		hoverReward:  -1,
 	}
 	g.sprites = initSprites()
 	g.bgStars = initStars(80)
@@ -91,17 +104,15 @@ func (g *Game) Update() error {
 	case entity.StateTitle:
 		g.ui.titleUI.Update()
 	case entity.StateBattle:
+		g.updateCardHover()
 		g.ui.updateBattleHUD(g)
 		g.ui.battleUI.Update()
 		for i := 0; i < g.gameSpeed; i++ {
 			g.updateBattle()
 		}
 	case entity.StateReward:
-		if !g.rewardReady {
-			g.ui.updateReward(g)
-			g.rewardReady = true
-		}
-		g.ui.rewardUI.Update()
+		g.updateRewardHover()
+		g.handleRewardInput()
 	case entity.StateGameOver, entity.StateVictory:
 		if !g.endScreenReady {
 			g.ui.updateEndScreen(g)
@@ -119,18 +130,22 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.state {
 	case entity.StateTitle:
 		drawStars(screen, g.bgStars, g.animTick)
+		g.drawTitleDecorations(screen)
 		g.ui.titleUI.Draw(screen)
 	case entity.StateBattle:
 		g.drawBattle(screen)
+		g.drawCustomHUD(screen)
 		g.ui.battleUI.Draw(screen)
+		g.drawHandCards(screen)
 		if g.fireballMode {
 			g.drawFireballIndicator(screen)
 		}
 	case entity.StateReward:
 		g.drawBattle(screen)
-		g.ui.rewardUI.Draw(screen)
+		g.drawRewardScreen(screen)
 	case entity.StateGameOver, entity.StateVictory:
 		drawStars(screen, g.bgStars, g.animTick)
+		g.drawEndScreenEffects(screen)
 		g.ui.endUI.Draw(screen)
 	}
 }
@@ -184,6 +199,5 @@ func (g *Game) handleRewardSelect(index int) {
 
 	g.wave++
 	g.state = entity.StateBattle
-	g.rewardReady = false
 	g.startWave()
 }

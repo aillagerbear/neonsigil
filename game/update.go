@@ -25,7 +25,6 @@ func (g *Game) initBattle() {
 	g.grid = [config.GridRows][config.GridCols]*entity.Summoner{}
 	g.graveyard = nil
 	g.ticks = 0
-	g.rewardReady = false
 	g.endScreenReady = false
 
 	// 초기 덱 생성: 전사 4장 + 궁수 4장
@@ -398,6 +397,15 @@ func (g *Game) handleBattleInput() {
 
 	mx, my := ebiten.CursorPosition()
 
+	// 카드 클릭 감지 (그리드/파이어볼 처리 전에 체크)
+	for _, rect := range g.cardRects {
+		if float64(mx) >= rect.X && float64(mx) <= rect.X+rect.W &&
+			float64(my) >= rect.Y && float64(my) <= rect.Y+rect.H {
+			g.handleCardSelect(rect.Index)
+			return
+		}
+	}
+
 	// 파이어볼 모드: 클릭하면 화염구 발사
 	if g.fireballMode {
 		fx := float64(mx)
@@ -458,7 +466,6 @@ func (g *Game) prepareReward() {
 	g.state = entity.StateReward
 	g.rewardCards = nil
 	g.rewardHover = -1
-	g.rewardReady = false
 
 	allTypes := []entity.CardType{entity.CardSoldier, entity.CardArcher, entity.CardSpearman, entity.CardMage, entity.CardFireball}
 	// 3장의 랜덤 카드 제시
@@ -468,4 +475,42 @@ func (g *Game) prepareReward() {
 	}
 }
 
-// updateReward is no longer needed - ebitenui handles reward selection via handleRewardSelect
+// ---- Custom card hover/click detection ----
+
+func (g *Game) updateCardHover() {
+	mx, my := ebiten.CursorPosition()
+	g.hoverCard = -1
+	for _, rect := range g.cardRects {
+		if float64(mx) >= rect.X && float64(mx) <= rect.X+rect.W &&
+			float64(my) >= rect.Y && float64(my) <= rect.Y+rect.H {
+			g.hoverCard = rect.Index
+			break
+		}
+	}
+}
+
+func (g *Game) updateRewardHover() {
+	mx, my := ebiten.CursorPosition()
+	g.hoverReward = -1
+	for _, rect := range g.rewardCardRects {
+		if float64(mx) >= rect.X && float64(mx) <= rect.X+rect.W &&
+			float64(my) >= rect.Y && float64(my) <= rect.Y+rect.H {
+			g.hoverReward = rect.Index
+			break
+		}
+	}
+}
+
+func (g *Game) handleRewardInput() {
+	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		return
+	}
+	mx, my := ebiten.CursorPosition()
+	for _, rect := range g.rewardCardRects {
+		if float64(mx) >= rect.X && float64(mx) <= rect.X+rect.W &&
+			float64(my) >= rect.Y && float64(my) <= rect.Y+rect.H {
+			g.handleRewardSelect(rect.Index)
+			return
+		}
+	}
+}

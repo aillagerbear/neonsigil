@@ -26,4 +26,16 @@ const (
 
 	// 적 스폰 간격 (틱)
 	EnemySpawnInterval = 40
+
+	// 카드 UI 크기
+	CardWidth         = 140
+	CardHeight        = 180
+	CardSpacing       = 8
+	RewardCardWidth   = 180
+	RewardCardHeight  = 260
+	RewardCardSpacing = 20
+
+	// 개선된 바 크기
+	BarWidth  = 160
+	BarHeight = 16
 )

@@ -42,9 +42,6 @@ func (g *Game) drawBattle(screen *ebiten.Image) {
 	g.drawEnemies(screen)
 	g.drawProjectiles(screen)
 	g.drawParticles(screen)
-
-	// Draw HP/Mana bars (pixel art style, over the ebitenui panels)
-	g.drawHPManaBar(screen)
 }
 
 // ---- Path ----
@@ -266,32 +263,6 @@ func (g *Game) drawSummonerBase(screen *ebiten.Image) {
 	drawKoreanTextWithShadow(screen, "기지", fontSmall, bx-10, by+18, color.RGBA{0xFF, 0xF1, 0xE8, 0xFF})
 }
 
-// ---- HP/Mana bars (pixel art style) ----
-
-func (g *Game) drawHPManaBar(screen *ebiten.Image) {
-	// HP bar below left sidebar label area
-	hpRatio := float64(g.summonerHP) / float64(config.SummonerMaxHP)
-	hpColor := pixelPalette['b'] // green
-	if hpRatio < 0.3 {
-		hpColor = pixelPalette['8'] // red
-	} else if hpRatio < 0.6 {
-		hpColor = pixelPalette['a'] // yellow
-	}
-	drawPixelBar(screen, 10, 70, 96, 10, hpRatio, hpColor, color.RGBA{0x20, 0x20, 0x20, 0xFF})
-
-	// Mana bar
-	manaRatio := g.mana / float64(g.maxMana)
-	manaColor := pixelPalette['c'] // blue
-	drawPixelBar(screen, 10, 115, 96, 10, manaRatio, manaColor, color.RGBA{0x20, 0x20, 0x20, 0xFF})
-
-	// Mana regen indicator
-	regenProgress := float64(g.manaTimer) / float64(config.ManaRegenTicks)
-	if g.mana < float64(g.maxMana) {
-		regenBarW := float32(96 * regenProgress)
-		vector.FillRect(screen, 10, 126, regenBarW, 2, color.RGBA{0x29, 0xAD, 0xFF, 0x60}, false)
-	}
-}
-
 // ---- Fireball mode indicator ----
 
 func (g *Game) drawFireballIndicator(screen *ebiten.Image) {
@@ -303,8 +274,3 @@ func (g *Game) drawFireballIndicator(screen *ebiten.Image) {
 	vector.StrokeRect(screen, 0, 0, config.ScreenWidth, config.ScreenHeight, 2, color.RGBA{0xFF, flash, 0x00, flash}, false)
 }
 
-// ---- Unused drawTextWithShadow kept for compatibility ----
-
-func drawTextWithShadow(screen *ebiten.Image, s string, x, y int) {
-	drawKoreanTextWithShadow(screen, s, fontSmall, float64(x), float64(y), color.RGBA{0xFF, 0xF1, 0xE8, 0xFF})
-}

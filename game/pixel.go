@@ -188,6 +188,68 @@ var arrowSpriteData = []string{
 	".0.",
 }
 
+// ---- UI Icon sprites ----
+
+// Heart icon 5x5
+var heartIconData = []string{
+	".8.8.",
+	"88888",
+	"88888",
+	".888.",
+	"..8..",
+}
+
+// Sword icon 5x7
+var swordIconData = []string{
+	"..6..",
+	"..6..",
+	"..6..",
+	"..6..",
+	".060.",
+	".060.",
+	"..0..",
+}
+
+// Mana gem icon 5x5
+var manaGemIconData = []string{
+	"..c..",
+	".ccc.",
+	"ccccc",
+	".ccc.",
+	"..c..",
+}
+
+// Shield emblem for Human 7x7
+var humanEmblemData = []string{
+	".00000.",
+	"0a9a9a0",
+	"0a9a9a0",
+	"09a9a90",
+	".0a9a0.",
+	"..090..",
+	"...0...",
+}
+
+// Leaf emblem for Elf 7x7
+var elfEmblemData = []string{
+	"..0b0..",
+	".0bbb0.",
+	"0bb3bb0",
+	"0bbb3b0",
+	".0bbb0.",
+	"..030..",
+	"..0b0..",
+}
+
+// Range icon 5x5
+var rangeIconData = []string{
+	"..a..",
+	"..0..",
+	"a0.0a",
+	"..0..",
+	"..a..",
+}
+
 // ---- SpriteCache ----
 
 type SpriteCache struct {
@@ -207,6 +269,19 @@ type SpriteCache struct {
 	OccupiedTile *ebiten.Image
 	HoverTile    *ebiten.Image
 	BlockedTile  *ebiten.Image
+
+	// UI icons
+	HeartIcon    *ebiten.Image
+	SwordIcon    *ebiten.Image
+	ManaGemIcon  *ebiten.Image
+	RangeIcon    *ebiten.Image
+	HumanEmblem  *ebiten.Image
+	ElfEmblem    *ebiten.Image
+
+	// Card backgrounds (pre-rendered gradients)
+	CardBG       *ebiten.Image
+	CardBGHover  *ebiten.Image
+	RewardCardBG *ebiten.Image
 }
 
 // ---- Star background ----
@@ -302,6 +377,28 @@ func lerpColor(a, b color.RGBA, t float64) color.RGBA {
 	}
 }
 
+// createGradientImage creates a vertical gradient image
+func createGradientImage(w, h int, topColor, bottomColor color.RGBA) *ebiten.Image {
+	img := ebiten.NewImage(w, h)
+	pix := make([]byte, w*h*4)
+	for y := 0; y < h; y++ {
+		t := float64(y) / float64(h-1)
+		r := byte(float64(topColor.R)*(1-t) + float64(bottomColor.R)*t)
+		g := byte(float64(topColor.G)*(1-t) + float64(bottomColor.G)*t)
+		b := byte(float64(topColor.B)*(1-t) + float64(bottomColor.B)*t)
+		a := byte(float64(topColor.A)*(1-t) + float64(bottomColor.A)*t)
+		for x := 0; x < w; x++ {
+			offset := (y*w + x) * 4
+			pix[offset] = r
+			pix[offset+1] = g
+			pix[offset+2] = b
+			pix[offset+3] = a
+		}
+	}
+	img.WritePixels(pix)
+	return img
+}
+
 func initSprites() *SpriteCache {
 	cache := &SpriteCache{}
 
@@ -321,6 +418,25 @@ func initSprites() *SpriteCache {
 	cache.Base = createSprite(baseCrystalSpriteData)
 	cache.Fireball = createSprite(fireballSpriteData)
 	cache.Arrow = createSprite(arrowSpriteData)
+
+	// UI icon sprites
+	cache.HeartIcon = createSprite(heartIconData)
+	cache.SwordIcon = createSprite(swordIconData)
+	cache.ManaGemIcon = createSprite(manaGemIconData)
+	cache.RangeIcon = createSprite(rangeIconData)
+	cache.HumanEmblem = createSprite(humanEmblemData)
+	cache.ElfEmblem = createSprite(elfEmblemData)
+
+	// Card background gradients
+	cache.CardBG = createGradientImage(config.CardWidth, config.CardHeight,
+		color.RGBA{0x1e, 0x1e, 0x32, 0xFF},
+		color.RGBA{0x28, 0x28, 0x42, 0xFF})
+	cache.CardBGHover = createGradientImage(config.CardWidth, config.CardHeight,
+		color.RGBA{0x28, 0x28, 0x40, 0xFF},
+		color.RGBA{0x32, 0x32, 0x50, 0xFF})
+	cache.RewardCardBG = createGradientImage(config.RewardCardWidth, config.RewardCardHeight,
+		color.RGBA{0x1e, 0x1e, 0x32, 0xFF},
+		color.RGBA{0x28, 0x28, 0x42, 0xFF})
 
 	// Tile textures (dithered algorithmic patterns)
 	grassC1 := color.RGBA{0x1a, 0x4a, 0x2a, 0xFF}
