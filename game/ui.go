@@ -444,11 +444,11 @@ func (ui *UIManager) updateBattleHUD(g *Game) {
 
 	// Speed button text indicator
 	if g.gameSpeed == 1 {
-		ui.speedBtn1.Text().Label = "1x ●"
+		ui.speedBtn1.Text().Label = "1x ON"
 		ui.speedBtn2.Text().Label = "2x"
 	} else {
 		ui.speedBtn1.Text().Label = "1x"
-		ui.speedBtn2.Text().Label = "2x ●"
+		ui.speedBtn2.Text().Label = "2x ON"
 	}
 
 	// Synergies

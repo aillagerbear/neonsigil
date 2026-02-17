@@ -592,6 +592,12 @@ func drawTitleWord(screen *ebiten.Image, word string, x, y float64, base color.R
 	drawKoreanText(screen, word, fontTitle, x, y, base)
 }
 
+func drawSparkle(screen *ebiten.Image, x, y, size float32, c color.RGBA) {
+	half := size / 2
+	vector.FillRect(screen, x-half, y-1, size, 2, c, false)
+	vector.FillRect(screen, x-1, y-half, 2, size, c, false)
+}
+
 func (g *Game) drawTitleDecorations(screen *ebiten.Image) {
 	t := float64(g.animTick)
 
@@ -616,6 +622,26 @@ func (g *Game) drawTitleDecorations(screen *ebiten.Image) {
 	mx := 808 + 24*math.Cos(t*0.011+2.0)
 	my := 210 + 16*math.Sin(t*0.016)
 	drawAvatarBadge(screen, mx, my, 22, cardAvatarStyle(entity.CardMage))
+
+	// Floating pastel bubbles and sparkles for a lighter idol-style mood.
+	colors := []color.RGBA{
+		{0xF7, 0xB4, 0xDA, 0x8E},
+		{0xA4, 0xED, 0xD8, 0x84},
+		{0xFF, 0xE5, 0xA3, 0x80},
+	}
+	for i := 0; i < 9; i++ {
+		fi := float64(i)
+		bx := 90 + fi*105 + 18*math.Sin(t*0.01+fi*0.8)
+		by := 76 + 15*math.Cos(t*0.013+fi*0.6)
+		r := float32(5 + 2*math.Sin(t*0.02+fi))
+		if r < 3 {
+			r = 3
+		}
+		c := colors[i%len(colors)]
+		vector.FillCircle(screen, float32(bx), float32(by), r, c, false)
+		vector.StrokeCircle(screen, float32(bx), float32(by), r+1, 1, color.RGBA{0xFF, 0xFF, 0xFF, 0x94}, false)
+		drawSparkle(screen, float32(bx)+r+4, float32(by)-r-2, 4, color.RGBA{0xFF, 0xFF, 0xFF, 0xAA})
+	}
 
 	// Title logo
 	titleTop := "SUMMONER'S"
@@ -656,7 +682,7 @@ func (g *Game) drawEndScreenEffects(screen *ebiten.Image) {
 
 	if g.state == entity.StateVictory {
 		// Pastel celebration confetti
-		for i := 0; i < 20; i++ {
+		for i := 0; i < 30; i++ {
 			fi := float64(i)
 			px := float64(config.ScreenWidth)/2 + 200*math.Cos(fi*0.7+t*0.02)
 			py := float64(config.ScreenHeight)/2 + 150*math.Sin(fi*0.5+t*0.025)
@@ -669,6 +695,7 @@ func (g *Game) drawEndScreenEffects(screen *ebiten.Image) {
 			}
 			vector.FillRect(screen, float32(px), float32(py), sz, sz,
 				confetti[i%len(confetti)], false)
+			drawSparkle(screen, float32(px)+sz+1, float32(py)-sz, 3, color.RGBA{0xFF, 0xFF, 0xFF, alpha / 2})
 		}
 	} else {
 		// Soft lilac vignette for game over

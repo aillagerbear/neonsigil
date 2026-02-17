@@ -48,10 +48,10 @@ func initFonts() {
 	goFontLarge = &text.GoTextFace{Source: fontBoldSource, Size: 20}
 
 	fontSmall = goFontSmall
-	fontCardInfo = &text.GoTextFace{Source: fontRegularSource, Size: 12}
+	fontCardInfo = &text.GoTextFace{Source: fontRegularSource, Size: 13}
 	fontCardName = &text.GoTextFace{Source: fontBoldSource, Size: 14}
 	fontCardCost = &text.GoTextFace{Source: fontBoldSource, Size: 16}
-	fontBarValue = &text.GoTextFace{Source: fontBoldSource, Size: 11}
+	fontBarValue = &text.GoTextFace{Source: fontBoldSource, Size: 12}
 	fontMedium = goFontMedium
 	fontLarge = goFontLarge
 	fontTitle = &text.GoTextFace{Source: fontBoldSource, Size: 34}
