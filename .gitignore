@@ -1,10 +1,8 @@
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+# Binary
+neonsigil
 
-# Build binaries
-ebitengine-test
-ebitengine-testing
-summoners-defense
+# Markdown docs
+*.md
+
+# OS
+.DS_Store
