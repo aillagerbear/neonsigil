@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"image/color"
@@ -13,6 +13,13 @@ const (
 	BoardRows    = 8
 	BoardOffsetX = 40
 	BoardOffsetY = 50
+)
+
+// Shop/bench constants
+const (
+	ShopSlots  = 5
+	BenchSlots = 8
+	RerollCost = 2
 )
 
 // Game states
@@ -117,35 +124,6 @@ const (
 	DamageMagic DamageType = "MAGIC"
 )
 
-// EnemyDef defines enemy base stats
-type EnemyDef struct {
-	Type       EnemyType
-	Name       string
-	BaseHP     float64
-	Speed      float64
-	LeakDamage int
-	Color      color.RGBA
-	ShieldPct  float64 // ranged damage reduction (SHIELD type)
-}
-
-// UnitDef defines a unit template
-type UnitDef struct {
-	ID       string
-	Name     string
-	Cost     int
-	Faction  Faction
-	Class    UnitClass
-	HP       float64
-	ATK      float64
-	AtkSpeed float64
-	Range    int
-	Armor    float64
-	AtkType  AttackType
-	DmgType  DamageType
-	Targeting TargetMode
-	SkillDesc string
-}
-
 // Pos is a grid coordinate
 type Pos struct {
 	X, Y int
@@ -154,102 +132,6 @@ type Pos struct {
 // FPos is a float position for smooth movement
 type FPos struct {
 	X, Y float64
-}
-
-// SpecialTile defines a special tile on the map
-type SpecialTileDef struct {
-	Pos  Pos
-	Type SpecialType
-}
-
-// WaveGroup defines a spawn group within a wave
-type WaveGroup struct {
-	Enemy    EnemyType
-	Count    int
-	Interval float64 // seconds between spawns
-	PathID   string
-}
-
-// WaveDef defines a complete wave
-type WaveDef struct {
-	ID     string
-	Groups []WaveGroup
-}
-
-// PathDef defines an enemy path
-type PathDef struct {
-	ID        string
-	Waypoints []Pos
-}
-
-// ShopRules for a stage
-type ShopRules struct {
-	RerollEnabled  bool
-	LevelUpEnabled bool
-	AllowedCosts   []int
-}
-
-// StageDef defines a complete stage
-type StageDef struct {
-	ID           string
-	Name         string
-	Integrity    int
-	StartingGold int
-	StartingLv   int
-	DeployCapBase int
-	ShopRules    ShopRules
-	TriFuseEnabled bool
-	NodesEnabled   bool
-	Blocks       []Pos
-	Nodes        []Pos
-	Specials     []SpecialTileDef
-	Paths        []PathDef
-	Waves        []WaveDef
-	EnemyHPMul   float64
-	EnemySpdMul  float64
-	BarrierEffect string
-}
-
-// --- Runtime structs ---
-
-// Enemy is a live enemy on the board
-type Enemy struct {
-	Def        *EnemyDef
-	HP         float64
-	MaxHP      float64
-	Pos        FPos   // pixel position
-	PathID     string
-	WaypointIdx int
-	Speed      float64
-	Alive      bool
-	Reached    bool  // reached the end
-	SlowTimer  float64
-	StunTimer  float64
-	Visible    bool  // for STALKER
-}
-
-// Projectile represents an in-flight projectile
-type Projectile struct {
-	X, Y     float64
-	TargetID int
-	Damage   float64
-	Speed    float64
-	Alive    bool
-}
-
-// Unit is a live unit on the board or bench
-type Unit struct {
-	Def        *UnitDef
-	Star       int
-	GridX, GridY int  // -1 if on bench
-	BenchSlot  int    // -1 if on board
-	HP         float64
-	MaxHP      float64
-	ATK        float64
-	AtkSpeed   float64
-	Range      int
-	AtkCooldown float64
-	Deployed   bool
 }
 
 // Neon color palette
@@ -293,4 +175,19 @@ var ClassColors = map[UnitClass]color.RGBA{
 	ClassCaster:   {200, 100, 255, 255},
 	ClassEngineer: {100, 255, 200, 255},
 	ClassSupport:  {255, 255, 100, 255},
+}
+
+// BenchSlotX returns the screen X coordinate for a bench slot
+func BenchSlotX(slot int) int {
+	return BoardOffsetX + slot*66
+}
+
+// BenchSlotY returns the screen Y coordinate for bench slots
+func BenchSlotY() int {
+	return BoardOffsetY + BoardRows*TileSize + 16
+}
+
+// WithAlpha returns a color with the given alpha value
+func WithAlpha(c color.RGBA, a uint8) color.RGBA {
+	return color.RGBA{c.R, c.G, c.B, a}
 }

@@ -1,46 +1,51 @@
-package main
+package battle
 
 import (
-	"fmt"
-	"image/color"
 	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"neonsigil/internal/board"
+	"neonsigil/internal/config"
+	"neonsigil/internal/data"
+	"neonsigil/internal/entity"
+	"neonsigil/internal/shop"
+	"neonsigil/internal/ui"
+	"neonsigil/internal/wave"
 )
 
 // BattleState manages the entire battle screen
 type BattleState struct {
-	Stage        *StageDef
-	Board        *Board
-	Shop         *Shop
-	WaveMgr      *WaveManager
-	Enemies      []*Enemy
-	Units        []*Unit
-	Projectiles  []*Projectile
+	Stage        *data.StageDef
+	Board        *board.Board
+	Shop         *shop.Shop
+	WaveMgr      *wave.WaveManager
+	Enemies      []*entity.Enemy
+	Units        []*entity.Unit
+	Projectiles  []*entity.Projectile
 	Integrity    int
 	MaxIntegrity int
-	Phase        BattlePhase
+	Phase        config.BattlePhase
 	Tick         int
 	Rng          *rand.Rand
 
 	// UI state
-	SelectedUnit  *Unit
-	DraggingUnit  *Unit
+	SelectedUnit  *entity.Unit
+	DraggingUnit  *entity.Unit
 	DragFromBench bool
 	DragFromGrid  bool
 	DragOrigX     int
 	DragOrigY     int
 
 	// Buttons
-	BtnStartWave Button
-	BtnReroll    Button
-	BtnLevelUp   Button
-	BtnSell      Button
+	BtnStartWave ui.Button
+	BtnReroll    ui.Button
+	BtnLevelUp   ui.Button
+	BtnSell      ui.Button
 
 	// Result
-	Victory bool
+	Victory  bool
 	GameOver bool
 
 	// Barrier
@@ -48,31 +53,33 @@ type BattleState struct {
 	BarrierActive   float64
 
 	// Stats
-	KillCount   int
-	WaveTime    float64
+	KillCount int
+	WaveTime  float64
 }
 
-func NewBattleState(stage *StageDef) *BattleState {
+// NewBattleState creates a new battle state for the given stage
+func NewBattleState(stage *data.StageDef) *BattleState {
 	rng := rand.New(rand.NewSource(rand.Int63()))
-	board := NewBoard(stage)
-	shop := NewShop(stage, rng)
-	waveMgr := NewWaveManager(stage, board)
+	b := board.NewBoard(stage)
+	s := shop.NewShop(stage, rng)
+	waveMgr := wave.NewWaveManager(stage, b)
 
 	return &BattleState{
 		Stage:        stage,
-		Board:        board,
-		Shop:         shop,
+		Board:        b,
+		Shop:         s,
 		WaveMgr:      waveMgr,
-		Enemies:      make([]*Enemy, 0),
-		Units:        make([]*Unit, 0),
-		Projectiles:  make([]*Projectile, 0),
+		Enemies:      make([]*entity.Enemy, 0),
+		Units:        make([]*entity.Unit, 0),
+		Projectiles:  make([]*entity.Projectile, 0),
 		Integrity:    stage.Integrity,
 		MaxIntegrity: stage.Integrity,
-		Phase:        PhasePrepare,
+		Phase:        config.PhasePrepare,
 		Rng:          rng,
 	}
 }
 
+// Update runs one frame of battle logic
 func (b *BattleState) Update() {
 	b.Tick++
 
@@ -110,10 +117,10 @@ func (b *BattleState) Update() {
 	}
 
 	// Update projectiles
-	UpdateProjectiles(b.Projectiles, b.Enemies)
+	entity.UpdateProjectiles(b.Projectiles, b.Enemies)
 
 	// Clean up dead projectiles
-	alive := make([]*Projectile, 0, len(b.Projectiles))
+	alive := make([]*entity.Projectile, 0, len(b.Projectiles))
 	for _, p := range b.Projectiles {
 		if p.Alive {
 			alive = append(alive, p)
@@ -148,8 +155,8 @@ func (b *BattleState) Update() {
 	}
 
 	// Check wave end — give bonus gold and refresh shop
-	if !b.WaveMgr.WaveActive && b.Phase == PhaseWave {
-		b.Phase = PhasePrepare
+	if !b.WaveMgr.WaveActive && b.Phase == config.PhaseWave {
+		b.Phase = config.PhasePrepare
 		b.Shop.AddGold(3 + b.WaveMgr.CurrentWave) // wave bonus
 		b.Shop.Refresh()
 	}
@@ -194,7 +201,7 @@ func (b *BattleState) handleClick(mx, my int) {
 	// Check buttons first
 	if b.BtnStartWave.Contains(mx, my) && !b.BtnStartWave.Disabled && !b.WaveMgr.WaveActive {
 		b.WaveMgr.StartWave()
-		b.Phase = PhaseWave
+		b.Phase = config.PhaseWave
 		return
 	}
 
@@ -214,9 +221,9 @@ func (b *BattleState) handleClick(mx, my int) {
 	}
 
 	// Check shop slot clicks
-	shopY := float64(ScreenHeight - 110)
+	shopY := float64(config.ScreenHeight - 110)
 	if float64(my) >= shopY && float64(my) < shopY+62 {
-		for i := 0; i < ShopSlots; i++ {
+		for i := 0; i < config.ShopSlots; i++ {
 			slotX := 80 + i*150
 			if mx >= slotX && mx < slotX+140 {
 				if b.Shop.CanBuy(i) {
@@ -228,10 +235,10 @@ func (b *BattleState) handleClick(mx, my int) {
 	}
 
 	// Check bench clicks
-	bY := benchSlotY()
+	bY := config.BenchSlotY()
 	if my >= bY && my < bY+50 {
-		for i := 0; i < BenchSlots; i++ {
-			bx := benchSlotX(i)
+		for i := 0; i < config.BenchSlots; i++ {
+			bx := config.BenchSlotX(i)
 			if mx >= bx && mx < bx+50 {
 				// Select bench unit
 				for _, u := range b.Units {
@@ -257,7 +264,7 @@ func (b *BattleState) handleClick(mx, my int) {
 
 	// Check board clicks
 	gx, gy := b.Board.ScreenToGrid(mx, my)
-	if gx >= 0 && gx < BoardCols && gy >= 0 && gy < BoardRows {
+	if gx >= 0 && gx < config.BoardCols && gy >= 0 && gy < config.BoardRows {
 		// Check if clicking on a deployed unit
 		for _, u := range b.Units {
 			if u.Deployed && u.GridX == gx && u.GridY == gy {
@@ -310,10 +317,11 @@ func (b *BattleState) handleClick(mx, my int) {
 	}
 }
 
+// BuyUnit purchases a unit from the shop and places it on the bench
 func (b *BattleState) BuyUnit(slot int) {
 	// Find free bench slot
 	benchSlot := -1
-	for i := 0; i < BenchSlots; i++ {
+	for i := 0; i < config.BenchSlots; i++ {
 		occupied := false
 		for _, u := range b.Units {
 			if u.BenchSlot == i {
@@ -345,6 +353,7 @@ func (b *BattleState) BuyUnit(slot int) {
 	}
 }
 
+// SellSelectedUnit sells the currently selected unit
 func (b *BattleState) SellSelectedUnit() {
 	if b.SelectedUnit == nil {
 		return
@@ -361,6 +370,7 @@ func (b *BattleState) SellSelectedUnit() {
 	b.SelectedUnit = nil
 }
 
+// DeployedCount returns the number of deployed units
 func (b *BattleState) DeployedCount() int {
 	count := 0
 	for _, u := range b.Units {
@@ -371,9 +381,10 @@ func (b *BattleState) DeployedCount() int {
 	return count
 }
 
-func (b *BattleState) CountSynergies() (map[Faction]int, map[UnitClass]int) {
-	factions := make(map[Faction]int)
-	classes := make(map[UnitClass]int)
+// CountSynergies counts deployed faction and class synergies
+func (b *BattleState) CountSynergies() (map[config.Faction]int, map[config.UnitClass]int) {
+	factions := make(map[config.Faction]int)
+	classes := make(map[config.UnitClass]int)
 	for _, u := range b.Units {
 		if u.Deployed {
 			factions[u.Def.Faction]++
@@ -383,8 +394,9 @@ func (b *BattleState) CountSynergies() (map[Faction]int, map[UnitClass]int) {
 	return factions, classes
 }
 
-func (b *BattleState) GetOccupiedNodes() []Pos {
-	var occupied []Pos
+// GetOccupiedNodes returns node positions that have units on them
+func (b *BattleState) GetOccupiedNodes() []config.Pos {
+	var occupied []config.Pos
 	for node := range b.Board.NodeSet {
 		for _, u := range b.Units {
 			if u.Deployed && u.GridX == node.X && u.GridY == node.Y {
@@ -396,6 +408,7 @@ func (b *BattleState) GetOccupiedNodes() []Pos {
 	return occupied
 }
 
+// ActivateBarrier activates the barrier effect
 func (b *BattleState) ActivateBarrier() {
 	b.BarrierCooldown = 20.0 // 20 second cooldown
 	b.BarrierActive = 3.0    // 3 second duration
@@ -411,22 +424,23 @@ func (b *BattleState) ActivateBarrier() {
 		// Increase damage taken (simplified: reduce HP slightly)
 		for _, e := range b.Enemies {
 			if e.Alive && !e.Reached {
-				e.TakeDamage(e.MaxHP*0.05, DamageMagic)
+				e.TakeDamage(e.MaxHP*0.05, config.DamageMagic)
 			}
 		}
 	case "BARRIER_REVEAL":
 		for _, e := range b.Enemies {
-			if e.Alive && !e.Reached && e.Def.Type == EnemyStalker {
+			if e.Alive && !e.Reached && e.Def.Type == config.EnemyStalker {
 				e.Visible = true
 			}
 		}
 	}
 }
 
+// CheckTriFuse checks and performs TRI-FUSE combination
 func (b *BattleState) CheckTriFuse(unitID string) {
 	// Find all units with same ID and star level
 	for star := 1; star <= 2; star++ {
-		var matching []*Unit
+		var matching []*entity.Unit
 		for _, u := range b.Units {
 			if u.Def.ID == unitID && u.Star == star {
 				matching = append(matching, u)
@@ -452,105 +466,4 @@ func (b *BattleState) CheckTriFuse(unitID string) {
 			break
 		}
 	}
-}
-
-func (b *BattleState) Draw(screen *ebiten.Image) {
-	// Background
-	screen.Fill(ColorBG)
-
-	// Board (with placement highlights when selecting a bench unit)
-	highlightPlaceable := b.SelectedUnit != nil && !b.SelectedUnit.Deployed
-	var occupiedTiles map[Pos]bool
-	if highlightPlaceable {
-		occupiedTiles = make(map[Pos]bool)
-		for _, u := range b.Units {
-			if u.Deployed {
-				occupiedTiles[Pos{u.GridX, u.GridY}] = true
-			}
-		}
-	}
-	b.Board.DrawWithHighlight(screen, b.Tick, highlightPlaceable, occupiedTiles)
-
-	// Node connections
-	DrawNodeIndicator(screen, b, b.Tick)
-
-	// Barrier effect visual
-	if b.BarrierActive > 0 {
-		drawBarrierEffect(screen, b, b.Tick)
-	}
-
-	// Selected unit range indicator
-	if b.SelectedUnit != nil && b.SelectedUnit.Deployed {
-		drawRangeIndicator(screen, b.SelectedUnit)
-	}
-
-	// Enemies
-	for _, e := range b.Enemies {
-		e.Draw(screen, b.Tick)
-	}
-
-	// Units on board
-	for _, u := range b.Units {
-		u.Draw(screen, b.Tick)
-	}
-
-	// Selected unit highlight
-	if b.SelectedUnit != nil && b.SelectedUnit.Deployed {
-		sx := float32(BoardOffsetX+b.SelectedUnit.GridX*TileSize) + float32(TileSize)/2
-		sy := float32(BoardOffsetY+b.SelectedUnit.GridY*TileSize) + float32(TileSize)/2
-		s := float32(TileSize/2 + 2)
-		vector.StrokeRect(screen, sx-s, sy-s, s*2, s*2, 2, ColorNeonCyan, false)
-	}
-
-	// Projectiles
-	DrawProjectiles(screen, b.Projectiles)
-
-	// UI
-	DrawHUD(screen, b, b.Tick)
-	DrawBenchUI(screen, b, b.Tick)
-	DrawShopUI(screen, b, b.Tick)
-	DrawInfoPanel(screen, b, b.Tick)
-
-	// Game over overlay
-	if b.GameOver {
-		drawGameOverlay(screen, b, b.Tick)
-	}
-}
-
-func drawRangeIndicator(screen *ebiten.Image, u *Unit) {
-	cx := float32(BoardOffsetX+u.GridX*TileSize) + float32(TileSize)/2
-	cy := float32(BoardOffsetY+u.GridY*TileSize) + float32(TileSize)/2
-	r := float32(u.Range*TileSize) + float32(TileSize)/2
-	vector.StrokeCircle(screen, cx, cy, r, 1, withAlpha(ColorNeonCyan, 60), false)
-}
-
-func drawBarrierEffect(screen *ebiten.Image, battle *BattleState, tick int) {
-	// Full screen overlay flash
-	alpha := uint8(battle.BarrierActive / 3.0 * 30)
-	vector.DrawFilledRect(screen, float32(BoardOffsetX), float32(BoardOffsetY),
-		float32(BoardCols*TileSize), float32(BoardRows*TileSize),
-		withAlpha(ColorNeonBlue, alpha), false)
-}
-
-func drawGameOverlay(screen *ebiten.Image, battle *BattleState, tick int) {
-	// Dark overlay
-	vector.DrawFilledRect(screen, 0, 0, ScreenWidth, ScreenHeight, withAlpha(ColorBG, 180), false)
-
-	if battle.Victory {
-		DrawTextGlowCentered(screen, "STAGE CLEAR", fontBold(36), ScreenWidth/2, ScreenHeight/2-40, ColorNeonCyan)
-		DrawTextCentered(screen, "Press ENTER to continue", fontRegular(14), ScreenWidth/2, ScreenHeight/2+30, ColorWhiteDim)
-	} else {
-		DrawTextGlowCentered(screen, "BREACH DETECTED", fontBold(36), ScreenWidth/2, ScreenHeight/2-40, ColorNeonRed)
-		DrawTextCentered(screen, "Press ENTER to retry", fontRegular(14), ScreenWidth/2, ScreenHeight/2+30, ColorWhiteDim)
-	}
-
-	// Stats
-	statsY := float64(ScreenHeight/2 + 70)
-	DrawTextCentered(screen, fmt.Sprintf("Kills: %d   Waves: %d/%d",
-		battle.KillCount, battle.WaveMgr.CurrentWave, battle.WaveMgr.TotalWaves()),
-		fontRegular(11), ScreenWidth/2, statsY, ColorWhiteDim)
-}
-
-func withAlpha(c color.RGBA, a uint8) color.RGBA {
-	return color.RGBA{c.R, c.G, c.B, a}
 }

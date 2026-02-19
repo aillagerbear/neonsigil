@@ -1,27 +1,26 @@
-package main
+package shop
 
 import (
 	"math/rand"
-)
 
-const (
-	ShopSlots   = 5
-	BenchSlots  = 8
-	RerollCost  = 2
+	"neonsigil/internal/config"
+	"neonsigil/internal/data"
+	"neonsigil/internal/entity"
 )
 
 // Shop manages the unit shop and economy
 type Shop struct {
-	Slots      [ShopSlots]*UnitDef // nil = empty slot
-	Gold       int
-	Level      int
-	XP         int
-	DeployCap  int
-	Rules      ShopRules
-	Rng        *rand.Rand
+	Slots     [config.ShopSlots]*data.UnitDef // nil = empty slot
+	Gold      int
+	Level     int
+	XP        int
+	DeployCap int
+	Rules     data.ShopRules
+	Rng       *rand.Rand
 }
 
-func NewShop(stage *StageDef, rng *rand.Rand) *Shop {
+// NewShop creates a new shop for the given stage
+func NewShop(stage *data.StageDef, rng *rand.Rand) *Shop {
 	s := &Shop{
 		Gold:      stage.StartingGold,
 		Level:     stage.StartingLv,
@@ -33,17 +32,18 @@ func NewShop(stage *StageDef, rng *rand.Rand) *Shop {
 	return s
 }
 
+// Refresh fills all shop slots with random units
 func (s *Shop) Refresh() {
-	for i := 0; i < ShopSlots; i++ {
+	for i := 0; i < config.ShopSlots; i++ {
 		s.Slots[i] = s.rollUnit()
 	}
 }
 
-func (s *Shop) rollUnit() *UnitDef {
+func (s *Shop) rollUnit() *data.UnitDef {
 	// Determine cost based on level weights
-	weights, ok := ShopWeights[s.Level]
+	weights, ok := data.ShopWeights[s.Level]
 	if !ok {
-		weights = ShopWeights[1]
+		weights = data.ShopWeights[1]
 	}
 
 	// Filter by allowed costs
@@ -61,7 +61,7 @@ func (s *Shop) rollUnit() *UnitDef {
 	}
 	if total == 0 {
 		// Fallback: all 1-cost
-		units := GetUnitsForCost(1)
+		units := data.GetUnitsForCost(1)
 		if len(units) > 0 {
 			return units[s.Rng.Intn(len(units))]
 		}
@@ -79,9 +79,9 @@ func (s *Shop) rollUnit() *UnitDef {
 		}
 	}
 
-	units := GetUnitsForCost(selectedCost)
+	units := data.GetUnitsForCost(selectedCost)
 	if len(units) == 0 {
-		units = GetUnitsForCost(1)
+		units = data.GetUnitsForCost(1)
 	}
 	if len(units) == 0 {
 		return nil
@@ -89,8 +89,9 @@ func (s *Shop) rollUnit() *UnitDef {
 	return units[s.Rng.Intn(len(units))]
 }
 
+// CanBuy checks if the player can afford the unit in the given slot
 func (s *Shop) CanBuy(slot int) bool {
-	if slot < 0 || slot >= ShopSlots {
+	if slot < 0 || slot >= config.ShopSlots {
 		return false
 	}
 	if s.Slots[slot] == nil {
@@ -99,37 +100,43 @@ func (s *Shop) CanBuy(slot int) bool {
 	return s.Gold >= s.Slots[slot].Cost
 }
 
-func (s *Shop) Buy(slot int) *Unit {
+// Buy purchases the unit in the given slot
+func (s *Shop) Buy(slot int) *entity.Unit {
 	if !s.CanBuy(slot) {
 		return nil
 	}
 	def := s.Slots[slot]
 	s.Gold -= def.Cost
 	s.Slots[slot] = nil
-	return NewUnit(def)
+	return entity.NewUnit(def)
 }
 
+// CanReroll checks if the player can afford a reroll
 func (s *Shop) CanReroll() bool {
-	return s.Rules.RerollEnabled && s.Gold >= RerollCost
+	return s.Rules.RerollEnabled && s.Gold >= config.RerollCost
 }
 
+// Reroll refreshes all shop slots
 func (s *Shop) Reroll() bool {
 	if !s.CanReroll() {
 		return false
 	}
-	s.Gold -= RerollCost
+	s.Gold -= config.RerollCost
 	s.Refresh()
 	return true
 }
 
+// LevelUpCost returns the cost to level up
 func (s *Shop) LevelUpCost() int {
 	return 4 + s.Level*2
 }
 
+// CanLevelUp checks if the player can level up
 func (s *Shop) CanLevelUp() bool {
 	return s.Rules.LevelUpEnabled && s.Gold >= s.LevelUpCost() && s.Level < 6
 }
 
+// LevelUp increases the shop level
 func (s *Shop) LevelUp() bool {
 	if !s.CanLevelUp() {
 		return false
@@ -140,7 +147,8 @@ func (s *Shop) LevelUp() bool {
 	return true
 }
 
-func (s *Shop) SellUnit(u *Unit) int {
+// SellUnit sells a unit and refunds gold
+func (s *Shop) SellUnit(u *entity.Unit) int {
 	refund := max(1, u.Def.Cost/2)
 	if u.Star >= 2 {
 		refund = u.Def.Cost * u.Star
@@ -153,4 +161,3 @@ func (s *Shop) SellUnit(u *Unit) int {
 func (s *Shop) AddGold(amount int) {
 	s.Gold += amount
 }
-

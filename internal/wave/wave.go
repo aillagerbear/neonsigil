@@ -1,30 +1,39 @@
-package main
+package wave
+
+import (
+	"neonsigil/internal/board"
+	"neonsigil/internal/data"
+	"neonsigil/internal/entity"
+)
 
 // WaveManager handles wave spawning
 type WaveManager struct {
-	Stage       *StageDef
-	Board       *Board
-	CurrentWave int
-	GroupTimers []float64 // timer for each group in current wave
-	GroupCounts []int     // how many spawned per group
-	WaveActive  bool
-	AllDone     bool
-	SpawnedEnemies []*Enemy
+	Stage          *data.StageDef
+	Board          *board.Board
+	CurrentWave    int
+	GroupTimers    []float64 // timer for each group in current wave
+	GroupCounts    []int     // how many spawned per group
+	WaveActive     bool
+	AllDone        bool
+	SpawnedEnemies []*entity.Enemy
 }
 
-func NewWaveManager(stage *StageDef, board *Board) *WaveManager {
+// NewWaveManager creates a new wave manager
+func NewWaveManager(stage *data.StageDef, b *board.Board) *WaveManager {
 	return &WaveManager{
 		Stage:       stage,
-		Board:       board,
+		Board:       b,
 		CurrentWave: 0,
 		WaveActive:  false,
 	}
 }
 
+// TotalWaves returns the total number of waves
 func (wm *WaveManager) TotalWaves() int {
 	return len(wm.Stage.Waves)
 }
 
+// StartWave begins the next wave
 func (wm *WaveManager) StartWave() {
 	if wm.CurrentWave >= len(wm.Stage.Waves) {
 		wm.AllDone = true
@@ -38,13 +47,14 @@ func (wm *WaveManager) StartWave() {
 	wm.SpawnedEnemies = nil
 }
 
-func (wm *WaveManager) Update() []*Enemy {
+// Update spawns enemies and checks wave completion
+func (wm *WaveManager) Update() []*entity.Enemy {
 	if !wm.WaveActive || wm.CurrentWave >= len(wm.Stage.Waves) {
 		return nil
 	}
 
 	wave := wm.Stage.Waves[wm.CurrentWave]
-	var newEnemies []*Enemy
+	var newEnemies []*entity.Enemy
 
 	allSpawned := true
 	for i, group := range wave.Groups {
@@ -56,9 +66,9 @@ func (wm *WaveManager) Update() []*Enemy {
 		wm.GroupTimers[i] -= 1.0 / 60.0
 		if wm.GroupTimers[i] <= 0 {
 			// Spawn one enemy
-			def := EnemyDefs[group.Enemy]
+			def := data.EnemyDefs[group.Enemy]
 			if def != nil {
-				e := NewEnemy(def, group.PathID, wm.Stage.EnemyHPMul, wm.Stage.EnemySpdMul, wm.Board)
+				e := entity.NewEnemy(def, group.PathID, wm.Stage.EnemyHPMul, wm.Stage.EnemySpdMul, wm.Board)
 				newEnemies = append(newEnemies, e)
 				wm.SpawnedEnemies = append(wm.SpawnedEnemies, e)
 			}
@@ -88,11 +98,13 @@ func (wm *WaveManager) Update() []*Enemy {
 	return newEnemies
 }
 
+// IsWaveActive returns whether a wave is currently active
 func (wm *WaveManager) IsWaveActive() bool {
 	return wm.WaveActive
 }
 
-func (wm *WaveManager) WaveCompleteCheck(enemies []*Enemy) bool {
+// WaveCompleteCheck checks if the current wave is complete
+func (wm *WaveManager) WaveCompleteCheck(enemies []*entity.Enemy) bool {
 	if !wm.WaveActive {
 		return false
 	}

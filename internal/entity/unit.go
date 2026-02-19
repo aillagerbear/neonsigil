@@ -1,4 +1,4 @@
-package main
+package entity
 
 import (
 	"image/color"
@@ -6,9 +6,29 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"neonsigil/internal/board"
+	"neonsigil/internal/config"
+	"neonsigil/internal/data"
 )
 
-func NewUnit(def *UnitDef) *Unit {
+// Unit is a live unit on the board or bench
+type Unit struct {
+	Def         *data.UnitDef
+	Star        int
+	GridX, GridY int // -1 if on bench
+	BenchSlot   int  // -1 if on board
+	HP          float64
+	MaxHP       float64
+	ATK         float64
+	AtkSpeed    float64
+	Range       int
+	AtkCooldown float64
+	Deployed    bool
+}
+
+// NewUnit creates a new unit from a definition
+func NewUnit(def *data.UnitDef) *Unit {
 	return &Unit{
 		Def:       def,
 		Star:      1,
@@ -24,6 +44,7 @@ func NewUnit(def *UnitDef) *Unit {
 	}
 }
 
+// Place deploys the unit to the board at the given grid position
 func (u *Unit) Place(gx, gy int) {
 	u.GridX = gx
 	u.GridY = gy
@@ -31,6 +52,7 @@ func (u *Unit) Place(gx, gy int) {
 	u.Deployed = true
 }
 
+// PlaceBench moves the unit to the bench
 func (u *Unit) PlaceBench(slot int) {
 	u.GridX = -1
 	u.GridY = -1
@@ -38,14 +60,15 @@ func (u *Unit) PlaceBench(slot int) {
 	u.Deployed = false
 }
 
-func (u *Unit) FindTarget(enemies []*Enemy, board *Board) *Enemy {
+// FindTarget finds the best target enemy based on the unit's targeting mode
+func (u *Unit) FindTarget(enemies []*Enemy, b *board.Board) *Enemy {
 	if !u.Deployed {
 		return nil
 	}
 
-	unitPx := float64(BoardOffsetX+u.GridX*TileSize) + float64(TileSize)/2
-	unitPy := float64(BoardOffsetY+u.GridY*TileSize) + float64(TileSize)/2
-	rangePixels := float64(u.Range) * float64(TileSize)
+	unitPx := float64(config.BoardOffsetX+u.GridX*config.TileSize) + float64(config.TileSize)/2
+	unitPy := float64(config.BoardOffsetY+u.GridY*config.TileSize) + float64(config.TileSize)/2
+	rangePixels := float64(u.Range) * float64(config.TileSize)
 
 	var best *Enemy
 	var bestScore float64
@@ -54,7 +77,7 @@ func (u *Unit) FindTarget(enemies []*Enemy, board *Board) *Enemy {
 		if !e.Alive || e.Reached {
 			continue
 		}
-		if !e.Visible && e.Def.Type == EnemyStalker {
+		if !e.Visible && e.Def.Type == config.EnemyStalker {
 			continue
 		}
 
@@ -62,17 +85,17 @@ func (u *Unit) FindTarget(enemies []*Enemy, board *Board) *Enemy {
 		dy := e.Pos.Y - unitPy
 		dist := math.Sqrt(dx*dx + dy*dy)
 
-		if dist > rangePixels+float64(TileSize)/2 {
+		if dist > rangePixels+float64(config.TileSize)/2 {
 			continue
 		}
 
 		var score float64
 		switch u.Def.Targeting {
-		case TargetFrontmost:
-			score = e.GetProgress(board)
-		case TargetLowHP:
+		case config.TargetFrontmost:
+			score = e.GetProgress(b)
+		case config.TargetLowHP:
 			score = 1.0 - (e.HP / e.MaxHP)
-		case TargetNearest:
+		case config.TargetNearest:
 			score = 1.0 - (dist / rangePixels)
 		}
 
@@ -85,7 +108,8 @@ func (u *Unit) FindTarget(enemies []*Enemy, board *Board) *Enemy {
 	return best
 }
 
-func (u *Unit) Update(enemies []*Enemy, board *Board, projectiles *[]*Projectile) {
+// Update runs the unit's combat logic
+func (u *Unit) Update(enemies []*Enemy, b *board.Board, projectiles *[]*Projectile) {
 	if !u.Deployed {
 		return
 	}
@@ -95,17 +119,17 @@ func (u *Unit) Update(enemies []*Enemy, board *Board, projectiles *[]*Projectile
 		return
 	}
 
-	target := u.FindTarget(enemies, board)
+	target := u.FindTarget(enemies, b)
 	if target == nil {
 		return
 	}
 
 	u.AtkCooldown = 1.0 / u.AtkSpeed
 
-	unitPx := float64(BoardOffsetX+u.GridX*TileSize) + float64(TileSize)/2
-	unitPy := float64(BoardOffsetY+u.GridY*TileSize) + float64(TileSize)/2
+	unitPx := float64(config.BoardOffsetX+u.GridX*config.TileSize) + float64(config.TileSize)/2
+	unitPy := float64(config.BoardOffsetY+u.GridY*config.TileSize) + float64(config.TileSize)/2
 
-	if u.Def.AtkType == AttackMelee {
+	if u.Def.AtkType == config.AttackMelee {
 		// Instant damage
 		target.TakeDamage(u.ATK, u.Def.DmgType)
 	} else {
@@ -127,41 +151,42 @@ func (u *Unit) Update(enemies []*Enemy, board *Board, projectiles *[]*Projectile
 	}
 }
 
+// Draw renders the unit on the board
 func (u *Unit) Draw(screen *ebiten.Image, tick int) {
 	if !u.Deployed {
 		return
 	}
 
-	sx := float32(BoardOffsetX+u.GridX*TileSize) + float32(TileSize)/2
-	sy := float32(BoardOffsetY+u.GridY*TileSize) + float32(TileSize)/2
-	s := float32(TileSize/2 - 6)
+	sx := float32(config.BoardOffsetX+u.GridX*config.TileSize) + float32(config.TileSize)/2
+	sy := float32(config.BoardOffsetY+u.GridY*config.TileSize) + float32(config.TileSize)/2
+	s := float32(config.TileSize/2 - 6)
 
 	// Faction color base
-	fc := FactionColors[u.Def.Faction]
+	fc := config.FactionColors[u.Def.Faction]
 
 	// Unit body (rounded square)
 	vector.DrawFilledRect(screen, sx-s, sy-s, s*2, s*2, color.RGBA{fc.R / 3, fc.G / 3, fc.B / 3, 240}, false)
 	vector.StrokeRect(screen, sx-s, sy-s, s*2, s*2, 2, fc, false)
 
 	// Class indicator (inner shape)
-	cc := ClassColors[u.Def.Class]
+	cc := config.ClassColors[u.Def.Class]
 	innerS := float32(8)
 	switch u.Def.Class {
-	case ClassVanguard:
+	case config.ClassVanguard:
 		// Shield shape
 		vector.DrawFilledRect(screen, sx-innerS, sy-innerS, innerS*2, innerS*2, cc, false)
-	case ClassMarksman:
+	case config.ClassMarksman:
 		// Cross
 		vector.DrawFilledRect(screen, sx-1, sy-innerS, 2, innerS*2, cc, false)
 		vector.DrawFilledRect(screen, sx-innerS, sy-1, innerS*2, 2, cc, false)
-	case ClassCaster:
+	case config.ClassCaster:
 		// Circle
 		vector.DrawFilledCircle(screen, sx, sy, innerS, cc, false)
-	case ClassEngineer:
+	case config.ClassEngineer:
 		// Gear (hexagon-ish)
 		vector.StrokeCircle(screen, sx, sy, innerS, 2, cc, false)
 		vector.DrawFilledCircle(screen, sx, sy, innerS*0.5, cc, false)
-	case ClassSupport:
+	case config.ClassSupport:
 		// Plus
 		vector.DrawFilledRect(screen, sx-innerS, sy-2, innerS*2, 4, cc, false)
 		vector.DrawFilledRect(screen, sx-2, sy-innerS, 4, innerS*2, cc, false)
@@ -171,10 +196,8 @@ func (u *Unit) Draw(screen *ebiten.Image, tick int) {
 	starY := sy + s + 6
 	for i := 0; i < u.Star; i++ {
 		starX := sx - float32(u.Star-1)*5 + float32(i)*10
-		vector.DrawFilledCircle(screen, starX, starY, 3, ColorNeonYellow, false)
+		vector.DrawFilledCircle(screen, starX, starY, 3, config.ColorNeonYellow, false)
 	}
-
-	// Range indicator when selected (could add later)
 
 	// Attack cooldown indicator (small bar at bottom)
 	if u.AtkCooldown > 0 {
@@ -183,23 +206,24 @@ func (u *Unit) Draw(screen *ebiten.Image, tick int) {
 		if ratio > 1 {
 			ratio = 1
 		}
-		vector.DrawFilledRect(screen, sx-s, sy+s-2, barW*(1-ratio), 2, ColorNeonCyan, false)
+		vector.DrawFilledRect(screen, sx-s, sy+s-2, barW*(1-ratio), 2, config.ColorNeonCyan, false)
 	}
 }
 
+// DrawOnBench renders the unit in a bench slot
 func (u *Unit) DrawOnBench(screen *ebiten.Image, slot int, tick int) {
-	bx := float32(benchSlotX(slot))
-	by := float32(benchSlotY())
+	bx := float32(config.BenchSlotX(slot))
+	by := float32(config.BenchSlotY())
 	s := float32(25)
 
-	fc := FactionColors[u.Def.Faction]
+	fc := config.FactionColors[u.Def.Faction]
 
 	// Background
 	vector.DrawFilledRect(screen, bx, by, s*2, s*2, color.RGBA{fc.R / 4, fc.G / 4, fc.B / 4, 220}, false)
 	vector.StrokeRect(screen, bx, by, s*2, s*2, 1.5, fc, false)
 
 	// Class indicator
-	cc := ClassColors[u.Def.Class]
+	cc := config.ClassColors[u.Def.Class]
 	cx := bx + s
 	cy := by + s
 	vector.DrawFilledCircle(screen, cx, cy, 8, cc, false)
@@ -207,60 +231,6 @@ func (u *Unit) DrawOnBench(screen *ebiten.Image, slot int, tick int) {
 	// Star
 	for i := 0; i < u.Star; i++ {
 		starX := cx - float32(u.Star-1)*4 + float32(i)*8
-		vector.DrawFilledCircle(screen, starX, by+s*2+6, 2.5, ColorNeonYellow, false)
-	}
-}
-
-func benchSlotX(slot int) int {
-	return BoardOffsetX + slot*66
-}
-
-func benchSlotY() int {
-	return BoardOffsetY + BoardRows*TileSize + 16
-}
-
-// UpdateProjectiles updates all projectiles
-func UpdateProjectiles(projectiles []*Projectile, enemies []*Enemy) {
-	for _, p := range projectiles {
-		if !p.Alive {
-			continue
-		}
-
-		if p.TargetID < 0 || p.TargetID >= len(enemies) {
-			p.Alive = false
-			continue
-		}
-
-		target := enemies[p.TargetID]
-		if !target.Alive || target.Reached {
-			p.Alive = false
-			continue
-		}
-
-		dx := target.Pos.X - p.X
-		dy := target.Pos.Y - p.Y
-		dist := math.Sqrt(dx*dx + dy*dy)
-
-		if dist < 8 {
-			target.TakeDamage(p.Damage, DamagePhys)
-			p.Alive = false
-			continue
-		}
-
-		speed := p.Speed / 60.0
-		p.X += (dx / dist) * speed
-		p.Y += (dy / dist) * speed
-	}
-}
-
-// DrawProjectiles draws all projectiles
-func DrawProjectiles(screen *ebiten.Image, projectiles []*Projectile) {
-	for _, p := range projectiles {
-		if !p.Alive {
-			continue
-		}
-		vector.DrawFilledCircle(screen, float32(p.X), float32(p.Y), 3, ColorNeonCyan, false)
-		// Trail
-		vector.DrawFilledCircle(screen, float32(p.X-2), float32(p.Y-1), 2, color.RGBA{0, 200, 255, 100}, false)
+		vector.DrawFilledCircle(screen, starX, by+s*2+6, 2.5, config.ColorNeonYellow, false)
 	}
 }
