@@ -1,8 +1,13 @@
-# Binary
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Local binaries
 neonsigil
+build/linux/
 
-# Markdown docs
-*.md
-
-# OS
-.DS_Store
+# Go module cache (just in case someone runs `go env GOPATH`-based builds)
+bin/
